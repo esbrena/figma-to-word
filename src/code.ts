@@ -47,7 +47,7 @@ let uiLayout:
       width: number;
       height: number;
       right: number;
-      maxUserHeight: number;
+      maxWidth: number;
     }
   | undefined;
 
@@ -120,11 +120,11 @@ postState();
 function applyInitialUiLayout(availWidth: number, availHeight: number) {
   const safeWidth = Number.isFinite(availWidth) && availWidth > 0 ? availWidth : 1440;
   const safeHeight = Number.isFinite(availHeight) && availHeight > 0 ? availHeight : 900;
-  const margin = 16;
-  const width = Math.round(clamp(Math.floor(safeWidth * 0.5), 420, 900));
-  const height = Math.round(clamp(safeHeight - margin * 2, 520, safeHeight - margin));
-  const x = Math.max(margin, safeWidth - width - margin);
-  const y = margin;
+  const maxWidth = Math.round(Math.max(360, Math.floor(safeWidth * 0.5)));
+  const width = Math.round(clamp(maxWidth, 420, maxWidth));
+  const height = Math.round(Math.max(420, safeHeight));
+  const x = Math.max(0, safeWidth - width);
+  const y = 0;
 
   uiLayout = {
     x,
@@ -132,20 +132,20 @@ function applyInitialUiLayout(availWidth: number, availHeight: number) {
     width,
     height,
     right: x + width,
-    maxUserHeight: Math.max(420, safeHeight - margin),
+    maxWidth,
   };
 
   figma.ui.resize(width, height);
   figma.ui.reposition(x, y);
 }
 
-function resizeUi(width: number, height: number) {
+function resizeUi(width: number, _height: number) {
   const layout = uiLayout;
-  const safeWidth = Math.round(clamp(width, 360, 1200));
-  const safeHeight = Math.round(clamp(height, 420, layout?.maxUserHeight || 1200));
+  const safeWidth = Math.round(clamp(width, 360, layout?.maxWidth || 900));
+  const safeHeight = Math.round(layout?.height || 650);
 
   if (layout) {
-    const x = Math.max(8, layout.right - safeWidth);
+    const x = Math.max(0, layout.right - safeWidth);
     uiLayout = {
       ...layout,
       x,

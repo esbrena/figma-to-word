@@ -29,7 +29,6 @@ import type {
 
 const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
 const exportSummary = getElement<HTMLDivElement>("exportSummary");
-const resetButton = getElement<HTMLButtonElement>("resetButton");
 const exportPdfButton = getElement<HTMLButtonElement>("exportPdfButton");
 const exportDocxButton = getElement<HTMLButtonElement>("exportDocxButton");
 const closeButton = getElement<HTMLButtonElement>("closeButton");
@@ -41,9 +40,7 @@ let currentState: PluginState | null = null;
 let resizeState:
   | {
       startX: number;
-      startY: number;
       startWidth: number;
-      startHeight: number;
     }
   | undefined;
 
@@ -117,10 +114,6 @@ blocksContainer.addEventListener("change", (event) => {
   });
 });
 
-resetButton.addEventListener("click", () => {
-  postMessageToPlugin({ type: "reset" });
-});
-
 closeButton.addEventListener("click", () => {
   postMessageToPlugin({ type: "close-plugin" });
 });
@@ -134,12 +127,12 @@ exportDocxButton.addEventListener("click", () => {
 });
 
 resizeHandle.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
   resizeState = {
     startX: event.clientX,
-    startY: event.clientY,
     startWidth: window.innerWidth,
-    startHeight: window.innerHeight,
   };
+  document.body.classList.add("is-resizing");
   resizeHandle.setPointerCapture(event.pointerId);
 });
 
@@ -152,17 +145,19 @@ resizeHandle.addEventListener("pointermove", (event) => {
     type: "resize-ui",
     payload: {
       width: resizeState.startWidth - (event.clientX - resizeState.startX),
-      height: resizeState.startHeight + (event.clientY - resizeState.startY),
+      height: window.innerHeight,
     },
   });
 });
 
 resizeHandle.addEventListener("pointerup", () => {
   resizeState = undefined;
+  document.body.classList.remove("is-resizing");
 });
 
 resizeHandle.addEventListener("pointercancel", () => {
   resizeState = undefined;
+  document.body.classList.remove("is-resizing");
 });
 
 window.onmessage = (event: MessageEvent) => {
@@ -204,8 +199,6 @@ function renderState(state: PluginState) {
   const canExport = state.document.pairs.length > 0;
   exportPdfButton.disabled = !canExport;
   exportDocxButton.disabled = !canExport;
-  resetButton.disabled =
-    state.blocks.length === 1 && !state.blocks[0].screen && !state.blocks[0].table;
 
   if (canExport) {
     setDefaultFilename(state.document);
@@ -214,7 +207,6 @@ function renderState(state: PluginState) {
 
 function renderSidebarSummary(state: PluginState) {
   const completedPairs = state.document.pairs;
-  const pendingBlocks = state.blocks.filter((block) => !block.screen || !block.table);
 
   exportSummary.innerHTML = `
     <div class="summary-row">
@@ -225,11 +217,18 @@ function renderSidebarSummary(state: PluginState) {
       <span>Listos para exportar</span>
       <strong>${completedPairs.length}</strong>
     </div>
-    <div class="summary-row">
-      <span>Pendientes</span>
-      <strong>${pendingBlocks.length}</strong>
-    </div>
+    <button id="resetButton" class="button summary-reset" type="button" ${
+      state.blocks.length === 1 && !state.blocks[0].screen && !state.blocks[0].table
+        ? "disabled"
+        : ""
+    }>
+      Limpiar bloques
+    </button>
   `;
+
+  getElement<HTMLButtonElement>("resetButton").addEventListener("click", () => {
+    postMessageToPlugin({ type: "reset" });
+  });
 }
 
 function renderBlocks(state: PluginState) {
@@ -339,7 +338,20 @@ function renderTranslationTable(table: TranslationTable) {
 }
 
 function exportCurrentDocument(format: "pdf" | "docx") {
-  if (!currentState || currentState.document.pairs.length === 0) {
+  if (!currentState) {
+    setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
+    return;
+  }
+
+  if (hasPartiallyLoadedBlock(currentState.blocks)) {
+    setStatus(
+      "Faltan recursos por cargar. Corrige el problema antes de exportar.",
+      true,
+    );
+    return;
+  }
+
+  if (currentState.document.pairs.length === 0) {
     setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
     return;
   }
@@ -378,6 +390,10 @@ function exportCurrentDocument(format: "pdf" | "docx") {
   }
 
   setExportButtonsDisabled(false);
+}
+
+function hasPartiallyLoadedBlock(blocks: TranslationBlock[]) {
+  return blocks.some((block) => Boolean(block.screen) !== Boolean(block.table));
 }
 
 function exportPdf(document: ExportDocument) {
