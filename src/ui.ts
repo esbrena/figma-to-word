@@ -1,11 +1,14 @@
 import {
   AlignmentType,
+  BorderStyle,
   Document as DocxDocument,
   FileChild,
   HeadingLevel,
   ImageRun,
+  PageOrientation,
   Packer,
   Paragraph,
+  ShadingType,
   Table,
   TableCell,
   TableRow,
@@ -24,17 +27,13 @@ import type {
 } from "./types";
 
 const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
-const selectionSummary = getElement<HTMLDivElement>("selectionSummary");
 const screenCountSummary = getElement<HTMLDivElement>("screenCountSummary");
-const columnsSummary = getElement<HTMLDivElement>("columnsSummary");
 const exportSummary = getElement<HTMLDivElement>("exportSummary");
-const importTableButton = getElement<HTMLButtonElement>("importTableButton");
 const resetButton = getElement<HTMLButtonElement>("resetButton");
 const exportPdfButton = getElement<HTMLButtonElement>("exportPdfButton");
 const exportDocxButton = getElement<HTMLButtonElement>("exportDocxButton");
 const closeButton = getElement<HTMLButtonElement>("closeButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
-const columnsInput = getElement<HTMLTextAreaElement>("columnsInput");
 const statusMessage = getElement<HTMLDivElement>("statusMessage");
 
 let currentState: PluginState | null = null;
@@ -48,6 +47,7 @@ blocksContainer.addEventListener("click", (event) => {
 
   const captureScreenBlockId = target.dataset.captureScreen;
   const captureTableBlockId = target.dataset.captureTable;
+  const importTemplate = target.dataset.importTemplate;
   const removeBlockId = target.dataset.removeBlock;
 
   if (captureScreenBlockId) {
@@ -75,14 +75,15 @@ blocksContainer.addEventListener("click", (event) => {
 
   if (target.dataset.addBlock) {
     postMessageToPlugin({ type: "add-block" });
+    return;
   }
-});
 
-importTableButton.addEventListener("click", () => {
-  postMessageToPlugin({
-    type: "import-template-table",
-    payload: { columns: getTemplateColumns() },
-  });
+  if (importTemplate) {
+    postMessageToPlugin({
+      type: "import-template-table",
+      payload: { columns: [] },
+    });
+  }
 });
 
 resetButton.addEventListener("click", () => {
@@ -127,7 +128,6 @@ window.onmessage = (event: MessageEvent) => {
 postMessageToPlugin({ type: "state-request" });
 
 function renderState(state: PluginState) {
-  renderSelection(state);
   renderSidebarSummary(state);
   renderBlocks(state);
 
@@ -142,37 +142,14 @@ function renderState(state: PluginState) {
   }
 }
 
-function renderSelection(state: PluginState) {
-  if (state.selection.count === 0) {
-    selectionSummary.innerHTML = `
-      <strong>Nada seleccionado</strong>
-      <span>Selecciona una pantalla o tabla en Figma y usa el bloque correspondiente.</span>
-    `;
-    return;
-  }
-
-  selectionSummary.innerHTML = `
-    <strong>${state.selection.count} elemento${
-      state.selection.count === 1 ? "" : "s"
-    } seleccionado${state.selection.count === 1 ? "" : "s"}</strong>
-    <span>${state.selection.names.map(escapeHtml).join(", ")}</span>
-  `;
-}
-
 function renderSidebarSummary(state: PluginState) {
   const completedPairs = state.document.pairs;
   const pendingBlocks = state.blocks.filter((block) => !block.screen || !block.table);
-  const columns = getExportColumns(completedPairs);
 
   screenCountSummary.innerHTML = `
     <strong>${completedPairs.length}</strong>
     <span>pantalla${completedPairs.length === 1 ? "" : "s"} en previsualizacion</span>
   `;
-
-  columnsSummary.innerHTML =
-    columns.length > 0
-      ? columns.map((column) => `<span class="chip">${escapeHtml(column)}</span>`).join("")
-      : `<span class="muted">Captura una tabla para ver columnas.</span>`;
 
   exportSummary.innerHTML = `
     <div class="summary-row">
@@ -193,21 +170,11 @@ function renderSidebarSummary(state: PluginState) {
 function renderBlocks(state: PluginState) {
   const lastBlock = state.blocks[state.blocks.length - 1];
   const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
-  const isEmptyDocument =
-    state.document.pairs.length === 0 &&
-    state.blocks.length === 1 &&
-    !state.blocks[0].screen &&
-    !state.blocks[0].table;
 
   blocksContainer.innerHTML = `
     <section class="blocks-header">
-      <div>
-        <p class="eyebrow">Documento</p>
-        <h2>Bloques de pantalla + tabla</h2>
-        <p>Captura cada pantalla con su tabla de traducciones. El documento se monta con los bloques completos.</p>
-      </div>
+      <h2>Construccion del documento</h2>
     </section>
-    ${isEmptyDocument ? renderEmptyHero() : ""}
     ${state.blocks
       .map((block, index) => renderBlock(block, index, state.blocks.length))
       .join("")}
@@ -221,39 +188,6 @@ function renderBlocks(state: PluginState) {
   `;
 }
 
-function renderEmptyHero() {
-  return `
-    <section class="empty-hero">
-      <div class="empty-illustration" aria-hidden="true">
-        <svg viewBox="0 0 220 160" role="img">
-          <defs>
-            <linearGradient id="cardGradient" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stop-color="#f7fbff" />
-              <stop offset="100%" stop-color="#edf5ff" />
-            </linearGradient>
-          </defs>
-          <rect x="22" y="22" width="176" height="116" rx="18" fill="url(#cardGradient)" />
-          <rect x="38" y="40" width="64" height="82" rx="12" fill="#ffffff" stroke="#cfe4ff" />
-          <rect x="118" y="42" width="64" height="16" rx="6" fill="#0d99ff" opacity="0.18" />
-          <rect x="118" y="70" width="64" height="12" rx="6" fill="#93c5fd" opacity="0.5" />
-          <rect x="118" y="92" width="52" height="12" rx="6" fill="#93c5fd" opacity="0.35" />
-          <circle cx="70" cy="70" r="16" fill="#0d99ff" opacity="0.16" />
-          <path d="M54 104h34" stroke="#0d99ff" stroke-width="6" stroke-linecap="round" opacity="0.35" />
-          <path d="M148 118l12 12 24-30" fill="none" stroke="#1f8a4c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </div>
-      <div>
-        <p class="eyebrow">Empty page</p>
-        <h3>Empieza capturando una pantalla y su tabla</h3>
-        <p>
-          Selecciona un frame o imagen PNG en Figma, capturalo en el bloque y despues
-          selecciona la tabla de traducciones correspondiente.
-        </p>
-      </div>
-    </section>
-  `;
-}
-
 function renderBlock(block: TranslationBlock, index: number, totalBlocks: number) {
   const isComplete = Boolean(block.screen && block.table);
 
@@ -261,8 +195,7 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
     <article class="translation-block ${isComplete ? "complete" : ""}">
       <div class="block-heading">
         <div>
-          <p class="eyebrow">Bloque ${index + 1}</p>
-          <h3>${block.screen ? escapeHtml(block.screen.name) : "Nueva pantalla"}</h3>
+          <h3>Bloque ${index + 1}</h3>
         </div>
         ${
           totalBlocks > 1
@@ -283,10 +216,10 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
               ? `<img class="screen-image" src="${block.screen.dataUrl}" alt="${escapeHtml(
                   block.screen.name,
                 )}" />`
-              : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame y capturala aqui.</p>`
+              : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame.</p>`
           }
           <button class="button primary" type="button" data-capture-screen="${block.id}">
-            ${block.screen ? "Reemplazar pantalla" : "Capturar pantalla seleccionada"}
+            ${block.screen ? "Reemplazar pantalla" : "Cargar pantalla seleccionada"}
           </button>
         </section>
         <section class="block-panel">
@@ -297,10 +230,13 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
           ${
             block.table
               ? renderTranslationTable(block.table)
-              : `<p class="empty-note">Selecciona la tabla editable en Figma y capturala aqui.</p>`
+              : `<p class="empty-note">Selecciona la tabla editable en Figma.</p>`
           }
           <button class="button primary" type="button" data-capture-table="${block.id}">
-            ${block.table ? "Reemplazar tabla" : "Capturar tabla seleccionada"}
+            ${block.table ? "Reemplazar tabla" : "Cargar tabla seleccionada"}
+          </button>
+          <button class="link-button" type="button" data-import-template="true">
+            Importar plantilla
           </button>
         </section>
       </div>
@@ -484,7 +420,24 @@ async function exportDocx(document: ExportDocument) {
   });
 
   const doc = new DocxDocument({
-    sections: [{ children }],
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+            },
+            margin: {
+              top: 720,
+              right: 720,
+              bottom: 720,
+              left: 720,
+            },
+          },
+        },
+        children,
+      },
+    ],
   });
   const blob = await Packer.toBlob(doc);
   downloadBlob(blob, `${getFilenameWithoutExtension()}.docx`);
@@ -532,20 +485,50 @@ function buildDocxPair(pair: TranslationPair, index: number): FileChild[] {
 }
 
 function buildDocxTranslationTable(table: TranslationTable) {
+  const border = {
+    style: BorderStyle.SINGLE,
+    color: "D9DEE7",
+    size: 1,
+  };
+
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: border,
+      bottom: border,
+      left: border,
+      right: border,
+      insideHorizontal: border,
+      insideVertical: border,
+    },
     rows: [table.headers, ...table.rows].map(
       (row, rowIndex) =>
         new TableRow({
           children: table.headers.map(
             (_, columnIndex) =>
               new TableCell({
+                margins: {
+                  top: 120,
+                  right: 120,
+                  bottom: 120,
+                  left: 120,
+                },
+                shading:
+                  rowIndex === 0
+                    ? {
+                        fill: "6B7280",
+                        color: "auto",
+                        type: ShadingType.CLEAR,
+                      }
+                    : undefined,
                 children: [
                   new Paragraph({
+                    alignment: rowIndex === 0 ? AlignmentType.CENTER : AlignmentType.LEFT,
                     children: [
                       new TextRun({
                         text: documentSafeText(row[columnIndex] || ""),
                         bold: rowIndex === 0,
+                        color: rowIndex === 0 ? "FFFFFF" : "1F2937",
                       }),
                     ],
                   }),
@@ -555,20 +538,6 @@ function buildDocxTranslationTable(table: TranslationTable) {
         }),
     ),
   });
-}
-
-function getExportColumns(pairs: TranslationPair[]) {
-  const columns = new Set<string>();
-
-  pairs.forEach((pair) => {
-    pair.table.headers.forEach((header) => {
-      if (header.trim()) {
-        columns.add(header.trim());
-      }
-    });
-  });
-
-  return [...columns];
 }
 
 function documentSafeText(value: string) {
@@ -682,13 +651,6 @@ function sanitizeFilename(value: string) {
     .replace(/\s+/g, "-")
     .toLowerCase()
     .slice(0, 80);
-}
-
-function getTemplateColumns() {
-  return columnsInput.value
-    .split(/[\n,]/)
-    .map((column) => column.trim())
-    .filter((column) => column.length > 0);
 }
 
 function formatDate(isoDate: string) {

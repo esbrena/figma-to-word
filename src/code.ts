@@ -266,6 +266,11 @@ async function importTemplateTable(columns: string[]) {
   tableFrame.name = "Tabla de traducciones";
   tableFrame.fills = [];
   tableFrame.clipsContent = false;
+  tableFrame.layoutMode = "VERTICAL";
+  tableFrame.primaryAxisSizingMode = "AUTO";
+  tableFrame.counterAxisSizingMode = "FIXED";
+  tableFrame.itemSpacing = 0;
+  tableFrame.strokesIncludedInLayout = true;
 
   const columnWidth = 210;
   const headerHeight = 54;
@@ -273,16 +278,15 @@ async function importTemplateTable(columns: string[]) {
   const borderColor: RGB = { r: 0.72, g: 0.72, b: 0.72 };
   const headerFill: RGB = { r: 0.43, g: 0.43, b: 0.43 };
   const width = headers.length * columnWidth;
-  const height = headerHeight + rows.length * rowHeight;
 
-  tableFrame.resize(width, height);
+  tableFrame.resize(width, headerHeight + rows.length * rowHeight);
 
-  headers.forEach((header, columnIndex) => {
+  const headerRow = createTemplateRow("Header", width);
+  tableFrame.appendChild(headerRow);
+  headers.forEach((header) => {
     createTemplateCell({
-      parent: tableFrame,
+      parent: headerRow,
       text: header,
-      x: columnIndex * columnWidth,
-      y: 0,
       width: columnWidth,
       height: headerHeight,
       fill: headerFill,
@@ -292,12 +296,12 @@ async function importTemplateTable(columns: string[]) {
   });
 
   rows.forEach((row, rowIndex) => {
-    row.forEach((cell, columnIndex) => {
+    const bodyRow = createTemplateRow(`Fila ${rowIndex + 1}`, width);
+    tableFrame.appendChild(bodyRow);
+    row.forEach((cell) => {
       createTemplateCell({
-        parent: tableFrame,
+        parent: bodyRow,
         text: cell,
-        x: columnIndex * columnWidth,
-        y: headerHeight + rowIndex * rowHeight,
         width: columnWidth,
         height: rowHeight,
         fill: { r: 1, g: 1, b: 1 },
@@ -319,25 +323,47 @@ async function importTemplateTable(columns: string[]) {
   postState();
 }
 
+function createTemplateRow(name: string, width: number): FrameNode {
+  const row = figma.createFrame();
+  row.name = name;
+  row.fills = [];
+  row.clipsContent = false;
+  row.layoutMode = "HORIZONTAL";
+  row.primaryAxisSizingMode = "FIXED";
+  row.counterAxisSizingMode = "AUTO";
+  row.layoutSizingHorizontal = "FILL";
+  row.itemSpacing = 0;
+  row.strokesIncludedInLayout = true;
+  row.resize(width, 1);
+  return row;
+}
+
 function createTemplateCell(options: {
   parent: FrameNode;
   text: string;
-  x: number;
-  y: number;
   width: number;
   height: number;
   fill: RGB;
   textColor: RGB;
   fontSize: number;
 }) {
-  const rectangle = figma.createRectangle();
-  rectangle.name = "Celda";
-  rectangle.x = options.x;
-  rectangle.y = options.y;
-  rectangle.resize(options.width, options.height);
-  rectangle.fills = [{ type: "SOLID", color: options.fill }];
-  rectangle.strokes = [{ type: "SOLID", color: { r: 0.72, g: 0.72, b: 0.72 } }];
-  rectangle.strokeWeight = 1;
+  const cell = figma.createFrame();
+  cell.name = "Celda";
+  cell.fills = [{ type: "SOLID", color: options.fill }];
+  cell.strokes = [{ type: "SOLID", color: { r: 0.72, g: 0.72, b: 0.72 } }];
+  cell.strokeWeight = 1;
+  cell.clipsContent = false;
+  cell.layoutMode = "VERTICAL";
+  cell.primaryAxisSizingMode = "AUTO";
+  cell.counterAxisSizingMode = "FIXED";
+  cell.layoutSizingHorizontal = "FIXED";
+  cell.layoutSizingVertical = "HUG";
+  cell.paddingTop = 14;
+  cell.paddingRight = 16;
+  cell.paddingBottom = 14;
+  cell.paddingLeft = 16;
+  cell.itemSpacing = 0;
+  cell.resize(options.width, options.height);
 
   const text = figma.createText();
   text.name = "Texto traduccion";
@@ -345,12 +371,12 @@ function createTemplateCell(options: {
   text.fontSize = options.fontSize;
   text.characters = options.text;
   text.fills = [{ type: "SOLID", color: options.textColor }];
-  text.x = options.x + 16;
-  text.y = options.y + 16;
-  text.resize(options.width - 32, options.height - 24);
+  text.textAutoResize = "HEIGHT";
+  text.layoutSizingHorizontal = "FILL";
+  text.resize(options.width - 32, Math.max(1, options.height - 28));
 
-  options.parent.appendChild(rectangle);
-  options.parent.appendChild(text);
+  cell.appendChild(text);
+  options.parent.appendChild(cell);
 }
 
 function extractTranslationTable(node: SceneNode): TranslationTable | null {

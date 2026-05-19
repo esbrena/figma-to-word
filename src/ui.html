@@ -117,26 +117,6 @@
         border-bottom: 0;
       }
 
-      .muted {
-        color: var(--text-muted);
-      }
-
-      .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .chip {
-        display: inline-flex;
-        border: 1px solid rgba(13, 153, 255, 0.22);
-        border-radius: 999px;
-        padding: 5px 9px;
-        background: var(--brand-soft);
-        color: #075985;
-        font-weight: 600;
-      }
-
       .field {
         display: grid;
         gap: 6px;
@@ -216,6 +196,18 @@
         font-size: 12px;
       }
 
+      .link-button {
+        justify-self: center;
+        border: 0;
+        padding: 2px 4px;
+        cursor: pointer;
+        background: transparent;
+        color: var(--brand);
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
       .button:disabled {
         cursor: not-allowed;
         opacity: 0.45;
@@ -248,19 +240,16 @@
       }
 
       .blocks-header {
-        margin-bottom: 18px;
-        padding: 2px 2px 8px;
+        margin-bottom: 12px;
+        padding: 2px 2px 4px;
       }
 
       .blocks-header h2 {
-        margin: 0 0 6px;
-        font-size: 28px;
-        letter-spacing: -0.04em;
-      }
-
-      .blocks-header p {
         margin: 0;
         color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
       }
 
       .eyebrow {
@@ -297,7 +286,7 @@
 
       .block-heading h3 {
         margin: 0;
-        font-size: 19px;
+        font-size: 18px;
         letter-spacing: -0.02em;
       }
 
@@ -310,11 +299,15 @@
 
       .block-panel {
         display: grid;
+        align-content: center;
+        justify-items: center;
         gap: 12px;
-        padding: 14px;
-        border: 1px solid var(--border);
+        min-height: 220px;
+        padding: 22px;
+        border: 1.5px dashed var(--border);
         border-radius: 18px;
-        background: var(--background);
+        background: rgba(255, 255, 255, 0.58);
+        text-align: center;
       }
 
       .step-title {
@@ -354,7 +347,9 @@
       .table-wrapper {
         display: grid;
         gap: 8px;
+        justify-self: stretch;
         overflow: auto;
+        text-align: left;
       }
 
       table {
@@ -384,50 +379,9 @@
         margin-top: 2px;
       }
 
-      .empty-hero {
-        display: grid;
-        grid-template-columns: 220px minmax(0, 1fr);
-        gap: 22px;
-        align-items: center;
-        margin-bottom: 18px;
-        padding: 24px;
-        border: 1px solid rgba(13, 153, 255, 0.2);
-        border-radius: 24px;
-        background:
-          linear-gradient(135deg, rgba(13, 153, 255, 0.1), rgba(255, 255, 255, 0.86)),
-          var(--background);
-        box-shadow: var(--shadow);
-      }
-
-      .empty-hero h3 {
-        margin: 0 0 8px;
-        font-size: 24px;
-        letter-spacing: -0.04em;
-      }
-
-      .empty-hero p {
-        margin: 0;
-        color: var(--text-muted);
-        line-height: 1.55;
-      }
-
-      .empty-illustration {
-        display: grid;
-        place-items: center;
-        min-height: 150px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.64);
-      }
-
-      .empty-illustration svg {
-        width: 100%;
-        max-width: 220px;
-      }
-
       @media (max-width: 860px) {
         .app,
-        .block-grid,
-        .empty-hero {
+        .block-grid {
           grid-template-columns: 1fr;
         }
 
@@ -447,13 +401,6 @@
         </div>
 
         <section class="panel">
-          <h2>Seleccion actual</h2>
-          <div id="selectionSummary" class="summary">
-            <strong>Cargando seleccion...</strong>
-          </div>
-        </section>
-
-        <section class="panel">
           <h2>Pantallas anadidas</h2>
           <div id="screenCountSummary" class="screen-count">
             <strong>0</strong>
@@ -462,28 +409,8 @@
         </section>
 
         <section class="panel">
-          <h2>Columnas a exportar</h2>
-          <div id="columnsSummary" class="chips">
-            <span class="muted">Captura una tabla para ver columnas.</span>
-          </div>
-        </section>
-
-        <section class="panel">
           <h2>Resumen de exportacion</h2>
           <div id="exportSummary" class="summary"></div>
-        </section>
-
-        <section class="panel">
-          <h2>Tabla plantilla</h2>
-          <div class="field" style="margin-top: 0">
-            <label for="columnsInput">Columnas editables de la plantilla</label>
-            <textarea id="columnsInput">Neutro, Voseado, Portugues, Ingles, Frances</textarea>
-          </div>
-          <div class="actions" style="margin-top: 12px">
-            <button id="importTableButton" class="button" type="button">
-              Importar tabla plantilla
-            </button>
-          </div>
         </section>
 
         <section class="panel">
