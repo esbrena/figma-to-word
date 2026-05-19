@@ -46,11 +46,14 @@
 
       .app {
         display: grid;
+        grid-template-areas: "sidebar main";
         grid-template-columns: 330px minmax(0, 1fr);
-        min-height: 100vh;
+        height: 100vh;
+        min-height: 0;
       }
 
       .sidebar {
+        grid-area: sidebar;
         display: flex;
         flex-direction: column;
         gap: 12px;
@@ -58,6 +61,7 @@
         border-right: 1px solid var(--border);
         background: rgba(247, 247, 248, 0.86);
         backdrop-filter: blur(18px);
+        overflow: auto;
       }
 
       .sidebar h1 {
@@ -93,16 +97,6 @@
         display: grid;
         gap: 8px;
         line-height: 1.35;
-      }
-
-      .screen-count {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-      }
-
-      .screen-count strong {
-        font-size: 28px;
       }
 
       .summary-row {
@@ -158,7 +152,15 @@
         gap: 8px;
       }
 
+      .export-actions {
+        grid-template-columns: 1fr 1fr;
+      }
+
       .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
         border: 1px solid var(--border);
         border-radius: 12px;
         padding: 10px 12px;
@@ -196,6 +198,19 @@
         font-size: 12px;
       }
 
+      .button-icon {
+        display: inline-grid;
+        place-items: center;
+        min-width: 28px;
+        height: 22px;
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.22);
+        color: currentColor;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+      }
+
       .link-button {
         justify-self: center;
         border: 0;
@@ -228,8 +243,10 @@
       }
 
       .main {
+        grid-area: main;
         min-width: 0;
-        max-height: 100vh;
+        min-height: 0;
+        height: 100vh;
         overflow: auto;
         padding: 28px;
       }
@@ -273,21 +290,60 @@
       }
 
       .translation-block.complete {
-        border-color: rgba(31, 138, 76, 0.5);
-        box-shadow: 0 18px 45px rgba(31, 138, 76, 0.1);
       }
 
       .block-heading {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
         gap: 12px;
       }
 
-      .block-heading h3 {
-        margin: 0;
+      .block-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .block-name-input {
+        width: min(320px, 100%);
+        border: 1px solid transparent;
+        border-radius: 10px;
+        padding: 7px 9px;
+        background: transparent;
+        color: var(--text);
         font-size: 18px;
+        font-weight: 800;
         letter-spacing: -0.02em;
+        outline: none;
+      }
+
+      .block-name-input:hover,
+      .block-name-input:focus {
+        border-color: var(--border);
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      .complete-check {
+        position: relative;
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        background: #0bb500;
+        box-shadow: 0 8px 18px rgba(11, 181, 0, 0.25);
+      }
+
+      .complete-check::before {
+        content: "";
+        width: 13px;
+        height: 7px;
+        border-bottom: 3px solid #ffffff;
+        border-left: 3px solid #ffffff;
+        transform: translateY(-1px) rotate(-45deg);
       }
 
       .block-grid {
@@ -314,19 +370,6 @@
         display: flex;
         align-items: center;
         gap: 8px;
-      }
-
-      .dot {
-        width: 11px;
-        height: 11px;
-        border-radius: 999px;
-        background: #cbd5e1;
-        box-shadow: 0 0 0 4px rgba(203, 213, 225, 0.24);
-      }
-
-      .dot.ok {
-        background: var(--success);
-        box-shadow: 0 0 0 4px rgba(31, 138, 76, 0.14);
       }
 
       .screen-image {
@@ -379,15 +422,56 @@
         margin-top: 2px;
       }
 
-      @media (max-width: 860px) {
-        .app,
+      @media (max-width: 760px) {
+        .app {
+          grid-template-areas:
+            "main"
+            "sidebar";
+          grid-template-columns: 1fr;
+          grid-template-rows: minmax(0, 1fr) auto;
+          height: 100vh;
+          overflow: hidden;
+        }
+
         .block-grid {
           grid-template-columns: 1fr;
         }
 
         .sidebar {
           border-right: 0;
-          border-bottom: 1px solid var(--border);
+          border-top: 1px solid var(--border);
+          border-bottom: 0;
+          max-height: 42vh;
+          padding: 12px;
+          box-shadow: 0 -18px 45px rgba(17, 24, 39, 0.08);
+        }
+
+        .sidebar > div:first-child {
+          display: none;
+        }
+
+        .main {
+          height: auto;
+          padding: 16px;
+        }
+
+        .panel {
+          padding: 12px;
+        }
+
+        .export-actions {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .utility-actions {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 430px) {
+        .export-actions,
+        .utility-actions {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -401,14 +485,6 @@
         </div>
 
         <section class="panel">
-          <h2>Pantallas anadidas</h2>
-          <div id="screenCountSummary" class="screen-count">
-            <strong>0</strong>
-            <span>pantallas en previsualizacion</span>
-          </div>
-        </section>
-
-        <section class="panel">
           <h2>Resumen de exportacion</h2>
           <div id="exportSummary" class="summary"></div>
         </section>
@@ -419,13 +495,17 @@
             <label for="filenameInput">Nombre del archivo</label>
             <input id="filenameInput" type="text" placeholder="traducciones-ui" />
           </div>
-          <div class="actions" style="margin-top: 12px">
+          <div class="actions export-actions" style="margin-top: 12px">
             <button id="exportPdfButton" class="button primary" type="button" disabled>
-              Exportar PDF
+              <span class="button-icon">PDF</span>
+              Exportar
             </button>
             <button id="exportDocxButton" class="button primary" type="button" disabled>
-              Exportar Word
+              <span class="button-icon">W</span>
+              Word
             </button>
+          </div>
+          <div class="actions utility-actions" style="margin-top: 8px">
             <button id="resetButton" class="button" type="button" disabled>
               Resetear
             </button>
@@ -1201,19 +1281,19 @@
           }) : void 0;
           return [indicies, classTypes, forbiddenBreakpoints];
         };
-        var Break = (
+        var Break2 = (
           /** @class */
           (function() {
-            function Break2(codePoints, lineBreak2, start, end) {
+            function Break3(codePoints, lineBreak2, start, end) {
               this.codePoints = codePoints;
               this.required = lineBreak2 === BREAK_MANDATORY;
               this.start = start;
               this.end = end;
             }
-            Break2.prototype.slice = function() {
+            Break3.prototype.slice = function() {
               return fromCodePoint$1.apply(void 0, this.codePoints.slice(this.start, this.end));
             };
-            return Break2;
+            return Break3;
           })()
         );
         var LineBreaker = function(str, options) {
@@ -1231,7 +1311,7 @@
               while (nextIndex < length && (lineBreak2 = _lineBreakAtIndex(codePoints, classTypes, indicies, ++nextIndex, forbiddenBreakpoints)) === BREAK_NOT_ALLOWED$1) {
               }
               if (lineBreak2 !== BREAK_NOT_ALLOWED$1 || nextIndex === length) {
-                var value = new Break(codePoints, lineBreak2, lastEnd, nextIndex);
+                var value = new Break2(codePoints, lineBreak2, lastEnd, nextIndex);
                 lastEnd = nextIndex;
                 return { value, done: false };
               }
@@ -33075,6 +33155,29 @@
       super("w:endnoteRef");
     }
   };
+  var BreakType = {
+    /** Column break - text continues at the beginning of the next column */
+    COLUMN: "column",
+    /** Page break - text continues at the beginning of the next page */
+    PAGE: "page"
+    // textWrapping breaks are the default and already exposed via the "Run" class
+  };
+  var Break = class extends XmlComponent {
+    constructor(type2) {
+      super("w:br");
+      this.root.push(
+        new Attributes({
+          type: type2
+        })
+      );
+    }
+  };
+  var PageBreak = class extends Run {
+    constructor() {
+      super({});
+      this.root.push(new Break(BreakType.PAGE));
+    }
+  };
   var PageBreakBefore = class extends XmlComponent {
     constructor() {
       super("w:pageBreakBefore");
@@ -53923,7 +54026,6 @@
 
   // src/ui.ts
   var blocksContainer = getElement("blocksContainer");
-  var screenCountSummary = getElement("screenCountSummary");
   var exportSummary = getElement("exportSummary");
   var resetButton = getElement("resetButton");
   var exportPdfButton = getElement("exportPdfButton");
@@ -53972,6 +54074,23 @@
       });
     }
   });
+  blocksContainer.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    const blockId = target.dataset.blockName;
+    if (!blockId) {
+      return;
+    }
+    postMessageToPlugin({
+      type: "update-block-name",
+      payload: {
+        blockId,
+        name: target.value
+      }
+    });
+  });
   resetButton.addEventListener("click", () => {
     postMessageToPlugin({ type: "reset" });
   });
@@ -54017,10 +54136,6 @@
   function renderSidebarSummary(state2) {
     const completedPairs = state2.document.pairs;
     const pendingBlocks = state2.blocks.filter((block) => !block.screen || !block.table);
-    screenCountSummary.innerHTML = `
-    <strong>${completedPairs.length}</strong>
-    <span>pantalla${completedPairs.length === 1 ? "" : "s"} en previsualizacion</span>
-  `;
     exportSummary.innerHTML = `
     <div class="summary-row">
       <span>Bloques totales</span>
@@ -54052,10 +54167,17 @@
   function renderBlock(block, index2, totalBlocks) {
     const isComplete = Boolean(block.screen && block.table);
     return `
-    <article class="translation-block ${isComplete ? "complete" : ""}">
+    <article class="translation-block">
       <div class="block-heading">
-        <div>
-          <h3>Bloque ${index2 + 1}</h3>
+        <div class="block-title">
+          <input
+            class="block-name-input"
+            type="text"
+            value="${escapeHtml(block.name || `Bloque ${index2 + 1}`)}"
+            data-block-name="${block.id}"
+            aria-label="Nombre del bloque ${index2 + 1}"
+          />
+          ${isComplete ? '<span class="complete-check" aria-label="Bloque completo"></span>' : ""}
         </div>
         ${totalBlocks > 1 ? `<button class="button small" type="button" data-remove-block="${block.id}">
                 Eliminar bloque
@@ -54064,7 +54186,6 @@
       <div class="block-grid">
         <section class="block-panel">
           <div class="step-title">
-            <span class="${block.screen ? "dot ok" : "dot"}"></span>
             <strong>Pantalla</strong>
           </div>
           ${block.screen ? `<img class="screen-image" src="${block.screen.dataUrl}" alt="${escapeHtml(
@@ -54076,7 +54197,6 @@
         </section>
         <section class="block-panel">
           <div class="step-title">
-            <span class="${block.table ? "dot ok" : "dot"}"></span>
             <strong>Tabla de traducciones</strong>
           </div>
           ${block.table ? renderTranslationTable(block.table) : `<p class="empty-note">Selecciona la tabla editable en Figma.</p>`}
@@ -54168,7 +54288,7 @@
       y3 += 26;
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(13);
-      pdf.text(documentSafeText(pair.screen.name), margin, y3);
+      pdf.text(documentSafeText(pair.name), margin, y3);
       y3 += 14;
       const gap = 24;
       const leftWidth = (pageWidth - margin * 2 - gap) * 0.45;
@@ -54221,14 +54341,46 @@
         heading: HeadingLevel.TITLE
       }),
       new Paragraph({
-        children: [new TextRun(`Fecha de generacion: ${formatDate(document2.generatedAt)}`)],
+        children: [
+          new TextRun({
+            text: `Fecha de generacion: ${formatDate(document2.generatedAt)}`,
+            font: "Verdana"
+          })
+        ],
         spacing: { after: 240 }
       })
     ];
     document2.pairs.forEach((pair, index2) => {
       children.push(...buildDocxPair(pair, index2));
+      if (index2 < document2.pairs.length - 1) {
+        children.push(new Paragraph({ children: [new PageBreak()] }));
+      }
     });
     const doc = new File({
+      styles: {
+        default: {
+          document: {
+            run: {
+              font: "Verdana",
+              size: 20
+            }
+          },
+          title: {
+            run: {
+              font: "Verdana",
+              size: 36,
+              bold: true
+            }
+          },
+          heading1: {
+            run: {
+              font: "Verdana",
+              size: 26,
+              bold: true
+            }
+          }
+        }
+      },
       sections: [
         {
           properties: {
@@ -54254,14 +54406,27 @@
   function buildDocxPair(pair, index2) {
     const imageSize = fitWithin(pair.screen.width, pair.screen.height, 300, 360);
     const translationTable = buildDocxTranslationTable(pair.table);
+    const outerBorder = {
+      style: BorderStyle.SINGLE,
+      color: "D3D3D3",
+      size: 2
+    };
     return [
       new Paragraph({
-        text: `${index2 + 1}. ${documentSafeText(pair.screen.name)}`,
+        text: `${index2 + 1}. ${documentSafeText(pair.name)}`,
         heading: HeadingLevel.HEADING_1,
         spacing: { before: index2 === 0 ? 0 : 360, after: 120 }
       }),
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: outerBorder,
+          bottom: outerBorder,
+          left: outerBorder,
+          right: outerBorder,
+          insideHorizontal: outerBorder,
+          insideVertical: outerBorder
+        },
         rows: [
           new TableRow({
             children: [
@@ -54328,7 +54493,8 @@
                     new TextRun({
                       text: documentSafeText(row[columnIndex] || ""),
                       bold: rowIndex === 0,
-                      color: rowIndex === 0 ? "FFFFFF" : "1F2937"
+                      color: rowIndex === 0 ? "FFFFFF" : "1F2937",
+                      font: "Verdana"
                     })
                   ]
                 })
@@ -54410,7 +54576,7 @@
     if (filenameInput.value.trim()) {
       return;
     }
-    const firstScreen = ((_a2 = document2.pairs[0]) == null ? void 0 : _a2.screen.name) || "traducciones-ui";
+    const firstScreen = ((_a2 = document2.pairs[0]) == null ? void 0 : _a2.name) || "traducciones-ui";
     filenameInput.value = sanitizeFilename(firstScreen);
   }
   function getFilenameWithoutExtension() {
