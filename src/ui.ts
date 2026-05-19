@@ -31,7 +31,6 @@ const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
 const exportSummary = getElement<HTMLDivElement>("exportSummary");
 const exportPdfButton = getElement<HTMLButtonElement>("exportPdfButton");
 const exportDocxButton = getElement<HTMLButtonElement>("exportDocxButton");
-const closeButton = getElement<HTMLButtonElement>("closeButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
 const statusMessage = getElement<HTMLDivElement>("statusMessage");
 const resizeHandle = getElement<HTMLDivElement>("resizeHandle");
@@ -112,10 +111,6 @@ blocksContainer.addEventListener("change", (event) => {
       name: target.value,
     },
   });
-});
-
-closeButton.addEventListener("click", () => {
-  postMessageToPlugin({ type: "close-plugin" });
 });
 
 exportPdfButton.addEventListener("click", () => {
@@ -259,6 +254,7 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
     <article class="translation-block">
       <div class="block-heading">
         <div class="block-title">
+          ${isComplete ? '<span class="complete-check" aria-label="Bloque completo"></span>' : ""}
           <input
             class="block-name-input"
             type="text"
@@ -266,7 +262,6 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
             data-block-name="${block.id}"
             aria-label="Nombre del bloque ${index + 1}"
           />
-          ${isComplete ? '<span class="complete-check" aria-label="Bloque completo"></span>' : ""}
         </div>
         ${
           totalBlocks > 1

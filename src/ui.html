@@ -47,7 +47,7 @@
       .app {
         display: grid;
         grid-template-areas: "sidebar main";
-        grid-template-columns: 330px minmax(0, 1fr);
+        grid-template-columns: 270px minmax(0, 1fr);
         height: 100vh;
         min-height: 0;
       }
@@ -93,25 +93,6 @@
         user-select: none;
       }
 
-      .close-button {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 12;
-        display: grid;
-        place-items: center;
-        width: 30px;
-        height: 30px;
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        cursor: pointer;
-        background: rgba(255, 255, 255, 0.86);
-        color: var(--text-muted);
-        font-size: 18px;
-        line-height: 1;
-        box-shadow: var(--shadow-soft);
-      }
-
       .sidebar {
         grid-area: sidebar;
         display: flex;
@@ -144,6 +125,11 @@
         box-shadow: var(--shadow-soft);
       }
 
+      .summary-card,
+      .export-card {
+        min-height: 178px;
+      }
+
       .panel h2 {
         margin: 0 0 11px;
         color: var(--text-muted);
@@ -165,6 +151,14 @@
         gap: 8px;
         padding: 7px 0;
         border-bottom: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .summary-row strong {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 700;
       }
 
       .summary-row:last-child {
@@ -295,10 +289,10 @@
 
       .status {
         min-height: 38px;
-        padding: 10px 12px;
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.72);
+        padding: 0 2px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
         color: var(--text-muted);
         line-height: 1.35;
       }
@@ -378,7 +372,7 @@
         padding: 7px 9px;
         background: transparent;
         color: var(--text);
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 800;
         letter-spacing: -0.02em;
         outline: none;
@@ -413,7 +407,7 @@
 
       .block-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
         gap: 16px;
         align-items: start;
       }
@@ -487,7 +481,7 @@
         margin-top: 2px;
       }
 
-      @media (max-width: 980px) {
+      @media (max-width: 520px) {
         .app {
           grid-template-areas:
             "main"
@@ -499,14 +493,12 @@
         }
 
         .sidebar {
-          display: grid;
-          grid-template-columns: minmax(150px, 0.8fr) minmax(260px, 1.2fr);
-          align-items: start;
+          display: flex;
           border-right: 0;
           border-top: 1px solid var(--border);
           border-bottom: 0;
           padding: 10px;
-          overflow: visible;
+          overflow: auto;
           box-shadow: 0 -18px 45px rgba(17, 24, 39, 0.08);
         }
 
@@ -531,20 +523,6 @@
           grid-template-columns: 1fr 1fr;
         }
 
-        .status {
-          grid-column: 1 / -1;
-          min-height: 0;
-          padding: 8px 10px;
-        }
-      }
-
-      @media (max-width: 620px) {
-        .sidebar {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      @media (max-width: 560px) {
         .block-grid {
           grid-template-columns: 1fr;
         }
@@ -560,9 +538,6 @@
   </head>
   <body>
     <div id="resizeHandle" class="resize-handle" title="Redimensionar plugin"></div>
-    <button id="closeButton" class="close-button" type="button" aria-label="Cerrar plugin">
-      &times;
-    </button>
     <main class="app">
       <aside class="sidebar">
         <div>
@@ -570,12 +545,12 @@
           <p>Exporta pantallas UI junto a sus tablas de traduccion.</p>
         </div>
 
-        <section class="panel">
+        <section class="panel summary-card">
           <h2>Resumen de exportacion</h2>
           <div id="exportSummary" class="summary"></div>
         </section>
 
-        <section class="panel">
+        <section class="panel export-card">
           <h2>Exportar</h2>
           <div class="field" style="margin-top: 0">
             <label for="filenameInput">Nombre del archivo</label>
