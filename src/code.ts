@@ -40,19 +40,9 @@ let nextBlockNumber = 1;
 const initialBlockId = createBlockId();
 let activeBlockId = initialBlockId;
 let blocks: TranslationBlock[] = [{ id: initialBlockId, name: "Bloque 1" }];
-let uiLayout:
-  | {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      right: number;
-      maxWidth: number;
-    }
-  | undefined;
 
 figma.showUI(__html__, {
-  width: 720,
+  width: 960,
   height: 620,
   themeColors: true,
   title: "UI Translation Exporter",
@@ -61,11 +51,6 @@ figma.showUI(__html__, {
 figma.ui.onmessage = async (message: UiToPluginMessage) => {
   if (message.type === "layout-ready") {
     applyInitialUiLayout(message.payload.availWidth, message.payload.availHeight);
-    return;
-  }
-
-  if (message.type === "resize-ui") {
-    resizeUi(message.payload.width, message.payload.height);
     return;
   }
 
@@ -120,47 +105,13 @@ postState();
 function applyInitialUiLayout(availWidth: number, availHeight: number) {
   const safeWidth = Number.isFinite(availWidth) && availWidth > 0 ? availWidth : 1440;
   const safeHeight = Number.isFinite(availHeight) && availHeight > 0 ? availHeight : 900;
-  const maxWidth = Math.round(Math.max(360, Math.floor(safeWidth * 0.5)));
-  const width = Math.round(clamp(maxWidth, 420, maxWidth));
+  const width = Math.round(Math.min(960, safeWidth));
   const height = Math.round(Math.max(420, safeHeight));
   const x = Math.max(0, safeWidth - width);
   const y = 0;
 
-  uiLayout = {
-    x,
-    y,
-    width,
-    height,
-    right: x + width,
-    maxWidth,
-  };
-
   figma.ui.resize(width, height);
   figma.ui.reposition(x, y);
-}
-
-function resizeUi(width: number, _height: number) {
-  const layout = uiLayout;
-  const safeWidth = Math.round(clamp(width, 360, layout?.maxWidth || 900));
-  const safeHeight = Math.round(layout?.height || 650);
-
-  if (layout) {
-    const x = Math.max(0, layout.right - safeWidth);
-    uiLayout = {
-      ...layout,
-      x,
-      width: safeWidth,
-      height: safeHeight,
-    };
-    figma.ui.resize(safeWidth, safeHeight);
-    figma.ui.reposition(x, layout.y);
-  } else {
-    figma.ui.resize(safeWidth, safeHeight);
-  }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
 }
 
 function postToUi(message: PluginToUiMessage) {
@@ -359,15 +310,16 @@ async function importTemplateTable(columns: string[]) {
   tableFrame.itemSpacing = 0;
   tableFrame.strokesIncludedInLayout = true;
 
-  const columnWidth = 210;
-  const headerHeight = 54;
-  const rowHeight = 72;
+  const headerHeight = 48;
+  const rowHeight = 64;
   const borderColor: RGB = { r: 0.72, g: 0.72, b: 0.72 };
   const headerFill: RGB = { r: 0.43, g: 0.43, b: 0.43 };
-  const width = headers.length * columnWidth;
+  const width = 900;
+  const columnWidth = width / headers.length;
   const templateHeight = headerHeight + rows.length * rowHeight;
 
   tableFrame.resize(width, templateHeight);
+  tableFrame.cornerRadius = 12;
 
   const headerRow = createTemplateRow("Header", width);
   tableFrame.appendChild(headerRow);
@@ -420,6 +372,7 @@ function createTemplateRow(name: string, width: number): FrameNode {
   row.primaryAxisSizingMode = "FIXED";
   row.counterAxisSizingMode = "AUTO";
   row.layoutSizingHorizontal = "FILL";
+  row.layoutSizingVertical = "HUG";
   row.itemSpacing = 0;
   row.strokesIncludedInLayout = true;
   row.resize(width, 1);
@@ -444,8 +397,10 @@ function createTemplateCell(options: {
   cell.layoutMode = "VERTICAL";
   cell.primaryAxisSizingMode = "AUTO";
   cell.counterAxisSizingMode = "FIXED";
-  cell.layoutSizingHorizontal = "FIXED";
+  cell.layoutSizingHorizontal = "FILL";
   cell.layoutSizingVertical = "HUG";
+  cell.layoutGrow = 1;
+  cell.minHeight = options.height;
   cell.paddingTop = 14;
   cell.paddingRight = 16;
   cell.paddingBottom = 14;
@@ -457,11 +412,11 @@ function createTemplateCell(options: {
   text.name = "Texto traduccion";
   text.fontName = REGULAR_FONT;
   text.fontSize = options.fontSize;
-  text.characters = options.text;
   text.fills = [{ type: "SOLID", color: options.textColor }];
   text.textAutoResize = "HEIGHT";
   text.layoutSizingHorizontal = "FILL";
   text.resize(options.width - 32, Math.max(1, options.height - 28));
+  text.characters = options.text;
 
   cell.appendChild(text);
   options.parent.appendChild(cell);

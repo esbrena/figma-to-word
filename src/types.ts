@@ -53,13 +53,6 @@ export type UiToPluginMessage =
         availHeight: number;
       };
     }
-  | {
-      type: "resize-ui";
-      payload: {
-        width: number;
-        height: number;
-      };
-    }
   | { type: "add-block" }
   | { type: "update-block-name"; payload: { blockId: string; name: string } }
   | { type: "capture-screen"; payload: { blockId: string } }

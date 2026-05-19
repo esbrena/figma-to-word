@@ -33,15 +33,8 @@ const exportPdfButton = getElement<HTMLButtonElement>("exportPdfButton");
 const exportDocxButton = getElement<HTMLButtonElement>("exportDocxButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
 const statusMessage = getElement<HTMLDivElement>("statusMessage");
-const resizeHandle = getElement<HTMLDivElement>("resizeHandle");
 
 let currentState: PluginState | null = null;
-let resizeState:
-  | {
-      startX: number;
-      startWidth: number;
-    }
-  | undefined;
 
 blocksContainer.addEventListener("click", (event) => {
   const target = event.target;
@@ -119,40 +112,6 @@ exportPdfButton.addEventListener("click", () => {
 
 exportDocxButton.addEventListener("click", () => {
   void exportCurrentDocument("docx");
-});
-
-resizeHandle.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  resizeState = {
-    startX: event.clientX,
-    startWidth: window.innerWidth,
-  };
-  document.body.classList.add("is-resizing");
-  resizeHandle.setPointerCapture(event.pointerId);
-});
-
-resizeHandle.addEventListener("pointermove", (event) => {
-  if (!resizeState) {
-    return;
-  }
-
-  postMessageToPlugin({
-    type: "resize-ui",
-    payload: {
-      width: resizeState.startWidth - (event.clientX - resizeState.startX),
-      height: window.innerHeight,
-    },
-  });
-});
-
-resizeHandle.addEventListener("pointerup", () => {
-  resizeState = undefined;
-  document.body.classList.remove("is-resizing");
-});
-
-resizeHandle.addEventListener("pointercancel", () => {
-  resizeState = undefined;
-  document.body.classList.remove("is-resizing");
 });
 
 window.onmessage = (event: MessageEvent) => {
