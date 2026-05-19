@@ -193,15 +193,21 @@ function renderSidebarSummary(state: PluginState) {
 function renderBlocks(state: PluginState) {
   const lastBlock = state.blocks[state.blocks.length - 1];
   const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
+  const isEmptyDocument =
+    state.document.pairs.length === 0 &&
+    state.blocks.length === 1 &&
+    !state.blocks[0].screen &&
+    !state.blocks[0].table;
 
   blocksContainer.innerHTML = `
     <section class="blocks-header">
       <div>
-        <p class="eyebrow">Pantalla principal</p>
+        <p class="eyebrow">Documento</p>
         <h2>Bloques de pantalla + tabla</h2>
         <p>Captura cada pantalla con su tabla de traducciones. El documento se monta con los bloques completos.</p>
       </div>
     </section>
+    ${isEmptyDocument ? renderEmptyHero() : ""}
     ${state.blocks
       .map((block, index) => renderBlock(block, index, state.blocks.length))
       .join("")}
@@ -212,6 +218,39 @@ function renderBlocks(state: PluginState) {
           </button>`
         : ""
     }
+  `;
+}
+
+function renderEmptyHero() {
+  return `
+    <section class="empty-hero">
+      <div class="empty-illustration" aria-hidden="true">
+        <svg viewBox="0 0 220 160" role="img">
+          <defs>
+            <linearGradient id="cardGradient" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stop-color="#f7fbff" />
+              <stop offset="100%" stop-color="#edf5ff" />
+            </linearGradient>
+          </defs>
+          <rect x="22" y="22" width="176" height="116" rx="18" fill="url(#cardGradient)" />
+          <rect x="38" y="40" width="64" height="82" rx="12" fill="#ffffff" stroke="#cfe4ff" />
+          <rect x="118" y="42" width="64" height="16" rx="6" fill="#0d99ff" opacity="0.18" />
+          <rect x="118" y="70" width="64" height="12" rx="6" fill="#93c5fd" opacity="0.5" />
+          <rect x="118" y="92" width="52" height="12" rx="6" fill="#93c5fd" opacity="0.35" />
+          <circle cx="70" cy="70" r="16" fill="#0d99ff" opacity="0.16" />
+          <path d="M54 104h34" stroke="#0d99ff" stroke-width="6" stroke-linecap="round" opacity="0.35" />
+          <path d="M148 118l12 12 24-30" fill="none" stroke="#1f8a4c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div>
+        <p class="eyebrow">Empty page</p>
+        <h3>Empieza capturando una pantalla y su tabla</h3>
+        <p>
+          Selecciona un frame o imagen PNG en Figma, capturalo en el bloque y despues
+          selecciona la tabla de traducciones correspondiente.
+        </p>
+      </div>
+    </section>
   `;
 }
 
@@ -364,7 +403,7 @@ function exportPdf(document: ExportDocument) {
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(13);
-    pdf.text(pair.screen.name, margin, y);
+    pdf.text(documentSafeText(pair.screen.name), margin, y);
     y += 14;
 
     const gap = 24;
@@ -391,7 +430,9 @@ function drawPdfTable(
   const columnCount = Math.max(table.headers.length, 1);
   const columnWidth = width / columnCount;
   const rowHeight = 30;
-  const allRows = [table.headers, ...table.rows];
+  const allRows = [table.headers, ...table.rows].map((row) =>
+    row.map((cell) => documentSafeText(cell)),
+  );
   const maxRows = Math.max(1, Math.floor(maxHeight / rowHeight));
   const rows = allRows.slice(0, maxRows);
 
@@ -455,7 +496,7 @@ function buildDocxPair(pair: TranslationPair, index: number): FileChild[] {
 
   return [
     new Paragraph({
-      text: `${index + 1}. ${pair.screen.name}`,
+      text: `${index + 1}. ${documentSafeText(pair.screen.name)}`,
       heading: HeadingLevel.HEADING_1,
       spacing: { before: index === 0 ? 0 : 360, after: 120 },
     }),
@@ -503,7 +544,7 @@ function buildDocxTranslationTable(table: TranslationTable) {
                   new Paragraph({
                     children: [
                       new TextRun({
-                        text: row[columnIndex] || "",
+                        text: documentSafeText(row[columnIndex] || ""),
                         bold: rowIndex === 0,
                       }),
                     ],
@@ -528,6 +569,63 @@ function getExportColumns(pairs: TranslationPair[]) {
   });
 
   return [...columns];
+}
+
+function documentSafeText(value: string) {
+  return stripUnsupportedEmoji(replaceFlagEmojiWithCountryCodes(value))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function replaceFlagEmojiWithCountryCodes(value: string) {
+  const codePoints = Array.from(value);
+  let output = "";
+
+  for (let index = 0; index < codePoints.length; index += 1) {
+    const first = regionalIndicatorLetter(codePoints[index]);
+    const second = regionalIndicatorLetter(codePoints[index + 1] || "");
+
+    if (first && second) {
+      output += ` (${first}${second})`;
+      index += 1;
+    } else {
+      output += codePoints[index];
+    }
+  }
+
+  return output;
+}
+
+function regionalIndicatorLetter(value: string) {
+  const codePoint = value.codePointAt(0);
+
+  if (!codePoint || codePoint < 0x1f1e6 || codePoint > 0x1f1ff) {
+    return "";
+  }
+
+  return String.fromCharCode(65 + codePoint - 0x1f1e6);
+}
+
+function stripUnsupportedEmoji(value: string) {
+  return Array.from(value)
+    .filter((character) => {
+      const codePoint = character.codePointAt(0) || 0;
+
+      if (codePoint === 0xfe0e || codePoint === 0xfe0f || codePoint === 0x200d) {
+        return false;
+      }
+
+      if (codePoint >= 0x1f000 && codePoint <= 0x1faff) {
+        return false;
+      }
+
+      if (codePoint >= 0x2600 && codePoint <= 0x27bf) {
+        return false;
+      }
+
+      return true;
+    })
+    .join("");
 }
 
 function fitWithin(width: number, height: number, maxWidth: number, maxHeight: number) {
