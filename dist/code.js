@@ -1,6 +1,8 @@
 "use strict";
 (() => {
   var __defProp = Object.defineProperty;
+  var __defProps = Object.defineProperties;
+  var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
   var __getOwnPropSymbols = Object.getOwnPropertySymbols;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __propIsEnum = Object.prototype.propertyIsEnumerable;
@@ -16,6 +18,7 @@
       }
     return a;
   };
+  var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 
   // src/code.ts
   var TEMPLATE_COLUMNS = ["Neutro", "Voseado", "Portugues", "Ingles", "Frances"];
@@ -40,13 +43,22 @@
   var initialBlockId = createBlockId();
   var activeBlockId = initialBlockId;
   var blocks = [{ id: initialBlockId, name: "Bloque 1" }];
+  var uiLayout;
   figma.showUI(__html__, {
-    width: 900,
-    height: 650,
+    width: 720,
+    height: 620,
     themeColors: true,
     title: "UI Translation Exporter"
   });
   figma.ui.onmessage = async (message) => {
+    if (message.type === "layout-ready") {
+      applyInitialUiLayout(message.payload.availWidth, message.payload.availHeight);
+      return;
+    }
+    if (message.type === "resize-ui") {
+      resizeUi(message.payload.width, message.payload.height);
+      return;
+    }
     if (message.type === "state-request") {
       postState();
       return;
@@ -85,6 +97,45 @@
   };
   figma.on("selectionchange", postState);
   postState();
+  function applyInitialUiLayout(availWidth, availHeight) {
+    const safeWidth = Number.isFinite(availWidth) && availWidth > 0 ? availWidth : 1440;
+    const safeHeight = Number.isFinite(availHeight) && availHeight > 0 ? availHeight : 900;
+    const margin = 16;
+    const width = Math.round(clamp(Math.floor(safeWidth * 0.5), 420, 900));
+    const height = Math.round(clamp(safeHeight - margin * 2, 520, safeHeight - margin));
+    const x = Math.max(margin, safeWidth - width - margin);
+    const y = margin;
+    uiLayout = {
+      x,
+      y,
+      width,
+      height,
+      right: x + width,
+      maxUserHeight: Math.max(420, safeHeight - margin)
+    };
+    figma.ui.resize(width, height);
+    figma.ui.reposition(x, y);
+  }
+  function resizeUi(width, height) {
+    const layout = uiLayout;
+    const safeWidth = Math.round(clamp(width, 360, 1200));
+    const safeHeight = Math.round(clamp(height, 420, (layout == null ? void 0 : layout.maxUserHeight) || 1200));
+    if (layout) {
+      const x = Math.max(8, layout.right - safeWidth);
+      uiLayout = __spreadProps(__spreadValues({}, layout), {
+        x,
+        width: safeWidth,
+        height: safeHeight
+      });
+      figma.ui.resize(safeWidth, safeHeight);
+      figma.ui.reposition(x, layout.y);
+    } else {
+      figma.ui.resize(safeWidth, safeHeight);
+    }
+  }
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
   function postToUi(message) {
     figma.ui.postMessage(message);
   }
