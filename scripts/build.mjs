@@ -7,7 +7,7 @@ const outdir = "dist";
 const sharedOptions = {
   bundle: true,
   logLevel: "info",
-  sourcemap: true,
+  sourcemap: watch ? "inline" : false,
   target: "es2020",
 };
 
@@ -23,7 +23,6 @@ const uiOptions = {
   entryPoints: ["src/ui.ts"],
   outfile: `${outdir}/ui.js`,
   format: "iife",
-  sourcemap: "inline",
   write: false,
   plugins: [
     {

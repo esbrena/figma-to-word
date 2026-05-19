@@ -42,10 +42,14 @@ npm run watch
 
 ## Cargar en Figma
 
-1. Ejecuta `npm run build`.
+1. Descarga o clona el repositorio completo.
 2. En Figma, ve a **Plugins > Development > Import plugin from manifest...**.
 3. Selecciona `manifest.json` en la raiz del repositorio.
 4. Abre el plugin desde **Plugins > Development > Figma to Word/PDF**.
+
+El repositorio incluye los archivos compilados en `dist/` para poder cargar el
+plugin directamente. Si modificas el codigo fuente, ejecuta `npm run build`
+antes de volver a importarlo o ejecutarlo en Figma.
 
 ## Scripts
 
