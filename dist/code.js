@@ -253,13 +253,12 @@
     tableFrame.counterAxisSizingMode = "FIXED";
     tableFrame.itemSpacing = 0;
     tableFrame.strokesIncludedInLayout = true;
-    const headerHeight = 48;
-    const rowHeight = 64;
+    const minCellHeight = 48;
     const borderColor = { r: 0.72, g: 0.72, b: 0.72 };
     const headerFill = { r: 0.43, g: 0.43, b: 0.43 };
     const width = 900;
     const columnWidth = width / headers.length;
-    const templateHeight = headerHeight + rows.length * rowHeight;
+    const templateHeight = minCellHeight * (rows.length + 1);
     tableFrame.resize(width, templateHeight);
     tableFrame.cornerRadius = 12;
     const headerRow = createTemplateRow("Header", width);
@@ -269,7 +268,7 @@
         parent: headerRow,
         text: header,
         width: columnWidth,
-        height: headerHeight,
+        height: minCellHeight,
         fill: headerFill,
         textColor: { r: 1, g: 1, b: 1 },
         fontSize: 18
@@ -283,7 +282,7 @@
           parent: bodyRow,
           text: cell,
           width: columnWidth,
-          height: rowHeight,
+          height: minCellHeight,
           fill: { r: 1, g: 1, b: 1 },
           textColor: { r: 0.12, g: 0.12, b: 0.14 },
           fontSize: 16
@@ -312,7 +311,8 @@
     row.layoutSizingVertical = "HUG";
     row.itemSpacing = 0;
     row.strokesIncludedInLayout = true;
-    row.resize(width, 1);
+    row.minHeight = 48;
+    row.resize(width, 48);
     return row;
   }
   function createTemplateCell(options) {
@@ -328,13 +328,14 @@
     cell.layoutSizingHorizontal = "FILL";
     cell.layoutSizingVertical = "HUG";
     cell.layoutGrow = 1;
-    cell.minHeight = options.height;
+    cell.minHeight = 48;
+    cell.minWidth = 180;
     cell.paddingTop = 14;
     cell.paddingRight = 16;
     cell.paddingBottom = 14;
     cell.paddingLeft = 16;
     cell.itemSpacing = 0;
-    cell.resize(options.width, options.height);
+    cell.resize(Math.max(180, options.width), options.height);
     const text = figma.createText();
     text.name = "Texto traduccion";
     text.fontName = REGULAR_FONT;
@@ -342,7 +343,7 @@
     text.fills = [{ type: "SOLID", color: options.textColor }];
     text.textAutoResize = "HEIGHT";
     text.layoutSizingHorizontal = "FILL";
-    text.resize(options.width - 32, Math.max(1, options.height - 28));
+    text.resize(Math.max(148, options.width - 32), 20);
     text.characters = options.text;
     cell.appendChild(text);
     options.parent.appendChild(cell);
