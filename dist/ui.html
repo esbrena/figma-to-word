@@ -117,26 +117,6 @@
         border-bottom: 0;
       }
 
-      .muted {
-        color: var(--text-muted);
-      }
-
-      .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .chip {
-        display: inline-flex;
-        border: 1px solid rgba(13, 153, 255, 0.22);
-        border-radius: 999px;
-        padding: 5px 9px;
-        background: var(--brand-soft);
-        color: #075985;
-        font-weight: 600;
-      }
-
       .field {
         display: grid;
         gap: 6px;
@@ -216,6 +196,18 @@
         font-size: 12px;
       }
 
+      .link-button {
+        justify-self: center;
+        border: 0;
+        padding: 2px 4px;
+        cursor: pointer;
+        background: transparent;
+        color: var(--brand);
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
       .button:disabled {
         cursor: not-allowed;
         opacity: 0.45;
@@ -248,19 +240,16 @@
       }
 
       .blocks-header {
-        margin-bottom: 18px;
-        padding: 2px 2px 8px;
+        margin-bottom: 12px;
+        padding: 2px 2px 4px;
       }
 
       .blocks-header h2 {
-        margin: 0 0 6px;
-        font-size: 28px;
-        letter-spacing: -0.04em;
-      }
-
-      .blocks-header p {
         margin: 0;
         color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
       }
 
       .eyebrow {
@@ -297,7 +286,7 @@
 
       .block-heading h3 {
         margin: 0;
-        font-size: 19px;
+        font-size: 18px;
         letter-spacing: -0.02em;
       }
 
@@ -310,11 +299,15 @@
 
       .block-panel {
         display: grid;
+        align-content: center;
+        justify-items: center;
         gap: 12px;
-        padding: 14px;
-        border: 1px solid var(--border);
+        min-height: 220px;
+        padding: 22px;
+        border: 1.5px dashed var(--border);
         border-radius: 18px;
-        background: var(--background);
+        background: rgba(255, 255, 255, 0.58);
+        text-align: center;
       }
 
       .step-title {
@@ -354,7 +347,9 @@
       .table-wrapper {
         display: grid;
         gap: 8px;
+        justify-self: stretch;
         overflow: auto;
+        text-align: left;
       }
 
       table {
@@ -384,50 +379,9 @@
         margin-top: 2px;
       }
 
-      .empty-hero {
-        display: grid;
-        grid-template-columns: 220px minmax(0, 1fr);
-        gap: 22px;
-        align-items: center;
-        margin-bottom: 18px;
-        padding: 24px;
-        border: 1px solid rgba(13, 153, 255, 0.2);
-        border-radius: 24px;
-        background:
-          linear-gradient(135deg, rgba(13, 153, 255, 0.1), rgba(255, 255, 255, 0.86)),
-          var(--background);
-        box-shadow: var(--shadow);
-      }
-
-      .empty-hero h3 {
-        margin: 0 0 8px;
-        font-size: 24px;
-        letter-spacing: -0.04em;
-      }
-
-      .empty-hero p {
-        margin: 0;
-        color: var(--text-muted);
-        line-height: 1.55;
-      }
-
-      .empty-illustration {
-        display: grid;
-        place-items: center;
-        min-height: 150px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.64);
-      }
-
-      .empty-illustration svg {
-        width: 100%;
-        max-width: 220px;
-      }
-
       @media (max-width: 860px) {
         .app,
-        .block-grid,
-        .empty-hero {
+        .block-grid {
           grid-template-columns: 1fr;
         }
 
@@ -447,13 +401,6 @@
         </div>
 
         <section class="panel">
-          <h2>Seleccion actual</h2>
-          <div id="selectionSummary" class="summary">
-            <strong>Cargando seleccion...</strong>
-          </div>
-        </section>
-
-        <section class="panel">
           <h2>Pantallas anadidas</h2>
           <div id="screenCountSummary" class="screen-count">
             <strong>0</strong>
@@ -462,28 +409,8 @@
         </section>
 
         <section class="panel">
-          <h2>Columnas a exportar</h2>
-          <div id="columnsSummary" class="chips">
-            <span class="muted">Captura una tabla para ver columnas.</span>
-          </div>
-        </section>
-
-        <section class="panel">
           <h2>Resumen de exportacion</h2>
           <div id="exportSummary" class="summary"></div>
-        </section>
-
-        <section class="panel">
-          <h2>Tabla plantilla</h2>
-          <div class="field" style="margin-top: 0">
-            <label for="columnsInput">Columnas editables de la plantilla</label>
-            <textarea id="columnsInput">Neutro, Voseado, Portugues, Ingles, Frances</textarea>
-          </div>
-          <div class="actions" style="margin-top: 12px">
-            <button id="importTableButton" class="button" type="button">
-              Importar tabla plantilla
-            </button>
-          </div>
         </section>
 
         <section class="panel">
@@ -29881,6 +29808,46 @@
       type: { key: "w:val", value: type2 }
     }
   });
+  var ShadingType = {
+    /** Clear shading - no pattern, fill color only */
+    CLEAR: "clear",
+    DIAGONAL_CROSS: "diagCross",
+    DIAGONAL_STRIPE: "diagStripe",
+    HORIZONTAL_CROSS: "horzCross",
+    HORIZONTAL_STRIPE: "horzStripe",
+    NIL: "nil",
+    PERCENT_5: "pct5",
+    PERCENT_10: "pct10",
+    PERCENT_12: "pct12",
+    PERCENT_15: "pct15",
+    PERCENT_20: "pct20",
+    PERCENT_25: "pct25",
+    PERCENT_30: "pct30",
+    PERCENT_35: "pct35",
+    PERCENT_37: "pct37",
+    PERCENT_40: "pct40",
+    PERCENT_45: "pct45",
+    PERCENT_50: "pct50",
+    PERCENT_55: "pct55",
+    PERCENT_60: "pct60",
+    PERCENT_62: "pct62",
+    PERCENT_65: "pct65",
+    PERCENT_70: "pct70",
+    PERCENT_75: "pct75",
+    PERCENT_80: "pct80",
+    PERCENT_85: "pct85",
+    PERCENT_87: "pct87",
+    PERCENT_90: "pct90",
+    PERCENT_95: "pct95",
+    REVERSE_DIAGONAL_STRIPE: "reverseDiagStripe",
+    SOLID: "solid",
+    THIN_DIAGONAL_CROSS: "thinDiagCross",
+    THIN_DIAGONAL_STRIPE: "thinDiagStripe",
+    THIN_HORIZONTAL_CROSS: "thinHorzCross",
+    THIN_REVERSE_DIAGONAL_STRIPE: "thinReverseDiagStripe",
+    THIN_VERTICAL_STRIPE: "thinVertStripe",
+    VERTICAL_STRIPE: "vertStripe"
+  };
   var ChangeAttributes = class extends XmlAttributeComponent {
     constructor() {
       super(...arguments);
@@ -53956,17 +53923,13 @@
 
   // src/ui.ts
   var blocksContainer = getElement("blocksContainer");
-  var selectionSummary = getElement("selectionSummary");
   var screenCountSummary = getElement("screenCountSummary");
-  var columnsSummary = getElement("columnsSummary");
   var exportSummary = getElement("exportSummary");
-  var importTableButton = getElement("importTableButton");
   var resetButton = getElement("resetButton");
   var exportPdfButton = getElement("exportPdfButton");
   var exportDocxButton = getElement("exportDocxButton");
   var closeButton = getElement("closeButton");
   var filenameInput = getElement("filenameInput");
-  var columnsInput = getElement("columnsInput");
   var statusMessage = getElement("statusMessage");
   var currentState = null;
   blocksContainer.addEventListener("click", (event) => {
@@ -53976,6 +53939,7 @@
     }
     const captureScreenBlockId = target.dataset.captureScreen;
     const captureTableBlockId = target.dataset.captureTable;
+    const importTemplate = target.dataset.importTemplate;
     const removeBlockId = target.dataset.removeBlock;
     if (captureScreenBlockId) {
       setStatus("Validando y capturando pantalla...");
@@ -53999,13 +53963,14 @@
     }
     if (target.dataset.addBlock) {
       postMessageToPlugin({ type: "add-block" });
+      return;
     }
-  });
-  importTableButton.addEventListener("click", () => {
-    postMessageToPlugin({
-      type: "import-template-table",
-      payload: { columns: getTemplateColumns() }
-    });
+    if (importTemplate) {
+      postMessageToPlugin({
+        type: "import-template-table",
+        payload: { columns: [] }
+      });
+    }
   });
   resetButton.addEventListener("click", () => {
     postMessageToPlugin({ type: "reset" });
@@ -54039,7 +54004,6 @@
   };
   postMessageToPlugin({ type: "state-request" });
   function renderState(state2) {
-    renderSelection(state2);
     renderSidebarSummary(state2);
     renderBlocks(state2);
     const canExport = state2.document.pairs.length > 0;
@@ -54050,28 +54014,13 @@
       setDefaultFilename(state2.document);
     }
   }
-  function renderSelection(state2) {
-    if (state2.selection.count === 0) {
-      selectionSummary.innerHTML = `
-      <strong>Nada seleccionado</strong>
-      <span>Selecciona una pantalla o tabla en Figma y usa el bloque correspondiente.</span>
-    `;
-      return;
-    }
-    selectionSummary.innerHTML = `
-    <strong>${state2.selection.count} elemento${state2.selection.count === 1 ? "" : "s"} seleccionado${state2.selection.count === 1 ? "" : "s"}</strong>
-    <span>${state2.selection.names.map(escapeHtml).join(", ")}</span>
-  `;
-  }
   function renderSidebarSummary(state2) {
     const completedPairs = state2.document.pairs;
     const pendingBlocks = state2.blocks.filter((block) => !block.screen || !block.table);
-    const columns = getExportColumns(completedPairs);
     screenCountSummary.innerHTML = `
     <strong>${completedPairs.length}</strong>
     <span>pantalla${completedPairs.length === 1 ? "" : "s"} en previsualizacion</span>
   `;
-    columnsSummary.innerHTML = columns.length > 0 ? columns.map((column) => `<span class="chip">${escapeHtml(column)}</span>`).join("") : `<span class="muted">Captura una tabla para ver columnas.</span>`;
     exportSummary.innerHTML = `
     <div class="summary-row">
       <span>Bloques totales</span>
@@ -54090,52 +54039,14 @@
   function renderBlocks(state2) {
     const lastBlock = state2.blocks[state2.blocks.length - 1];
     const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
-    const isEmptyDocument = state2.document.pairs.length === 0 && state2.blocks.length === 1 && !state2.blocks[0].screen && !state2.blocks[0].table;
     blocksContainer.innerHTML = `
     <section class="blocks-header">
-      <div>
-        <p class="eyebrow">Documento</p>
-        <h2>Bloques de pantalla + tabla</h2>
-        <p>Captura cada pantalla con su tabla de traducciones. El documento se monta con los bloques completos.</p>
-      </div>
+      <h2>Construccion del documento</h2>
     </section>
-    ${isEmptyDocument ? renderEmptyHero() : ""}
     ${state2.blocks.map((block, index2) => renderBlock(block, index2, state2.blocks.length)).join("")}
     ${canAddAnother ? `<button class="button secondary add-block" type="button" data-add-block="true">
             Anadir otra pantalla
           </button>` : ""}
-  `;
-  }
-  function renderEmptyHero() {
-    return `
-    <section class="empty-hero">
-      <div class="empty-illustration" aria-hidden="true">
-        <svg viewBox="0 0 220 160" role="img">
-          <defs>
-            <linearGradient id="cardGradient" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stop-color="#f7fbff" />
-              <stop offset="100%" stop-color="#edf5ff" />
-            </linearGradient>
-          </defs>
-          <rect x="22" y="22" width="176" height="116" rx="18" fill="url(#cardGradient)" />
-          <rect x="38" y="40" width="64" height="82" rx="12" fill="#ffffff" stroke="#cfe4ff" />
-          <rect x="118" y="42" width="64" height="16" rx="6" fill="#0d99ff" opacity="0.18" />
-          <rect x="118" y="70" width="64" height="12" rx="6" fill="#93c5fd" opacity="0.5" />
-          <rect x="118" y="92" width="52" height="12" rx="6" fill="#93c5fd" opacity="0.35" />
-          <circle cx="70" cy="70" r="16" fill="#0d99ff" opacity="0.16" />
-          <path d="M54 104h34" stroke="#0d99ff" stroke-width="6" stroke-linecap="round" opacity="0.35" />
-          <path d="M148 118l12 12 24-30" fill="none" stroke="#1f8a4c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </div>
-      <div>
-        <p class="eyebrow">Empty page</p>
-        <h3>Empieza capturando una pantalla y su tabla</h3>
-        <p>
-          Selecciona un frame o imagen PNG en Figma, capturalo en el bloque y despues
-          selecciona la tabla de traducciones correspondiente.
-        </p>
-      </div>
-    </section>
   `;
   }
   function renderBlock(block, index2, totalBlocks) {
@@ -54144,8 +54055,7 @@
     <article class="translation-block ${isComplete ? "complete" : ""}">
       <div class="block-heading">
         <div>
-          <p class="eyebrow">Bloque ${index2 + 1}</p>
-          <h3>${block.screen ? escapeHtml(block.screen.name) : "Nueva pantalla"}</h3>
+          <h3>Bloque ${index2 + 1}</h3>
         </div>
         ${totalBlocks > 1 ? `<button class="button small" type="button" data-remove-block="${block.id}">
                 Eliminar bloque
@@ -54159,9 +54069,9 @@
           </div>
           ${block.screen ? `<img class="screen-image" src="${block.screen.dataUrl}" alt="${escapeHtml(
       block.screen.name
-    )}" />` : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame y capturala aqui.</p>`}
+    )}" />` : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame.</p>`}
           <button class="button primary" type="button" data-capture-screen="${block.id}">
-            ${block.screen ? "Reemplazar pantalla" : "Capturar pantalla seleccionada"}
+            ${block.screen ? "Reemplazar pantalla" : "Cargar pantalla seleccionada"}
           </button>
         </section>
         <section class="block-panel">
@@ -54169,9 +54079,12 @@
             <span class="${block.table ? "dot ok" : "dot"}"></span>
             <strong>Tabla de traducciones</strong>
           </div>
-          ${block.table ? renderTranslationTable(block.table) : `<p class="empty-note">Selecciona la tabla editable en Figma y capturala aqui.</p>`}
+          ${block.table ? renderTranslationTable(block.table) : `<p class="empty-note">Selecciona la tabla editable en Figma.</p>`}
           <button class="button primary" type="button" data-capture-table="${block.id}">
-            ${block.table ? "Reemplazar tabla" : "Capturar tabla seleccionada"}
+            ${block.table ? "Reemplazar tabla" : "Cargar tabla seleccionada"}
+          </button>
+          <button class="link-button" type="button" data-import-template="true">
+            Importar plantilla
           </button>
         </section>
       </div>
@@ -54316,7 +54229,24 @@
       children.push(...buildDocxPair(pair, index2));
     });
     const doc = new File({
-      sections: [{ children }]
+      sections: [
+        {
+          properties: {
+            page: {
+              size: {
+                orientation: PageOrientation.LANDSCAPE
+              },
+              margin: {
+                top: 720,
+                right: 720,
+                bottom: 720,
+                left: 720
+              }
+            }
+          },
+          children
+        }
+      ]
     });
     const blob = await Packer.toBlob(doc);
     downloadBlob(blob, `${getFilenameWithoutExtension()}.docx`);
@@ -54361,18 +54291,44 @@
     ];
   }
   function buildDocxTranslationTable(table) {
+    const border = {
+      style: BorderStyle.SINGLE,
+      color: "D9DEE7",
+      size: 1
+    };
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: border,
+        bottom: border,
+        left: border,
+        right: border,
+        insideHorizontal: border,
+        insideVertical: border
+      },
       rows: [table.headers, ...table.rows].map(
         (row, rowIndex) => new TableRow({
           children: table.headers.map(
             (_3, columnIndex) => new TableCell({
+              margins: {
+                top: 120,
+                right: 120,
+                bottom: 120,
+                left: 120
+              },
+              shading: rowIndex === 0 ? {
+                fill: "6B7280",
+                color: "auto",
+                type: ShadingType.CLEAR
+              } : void 0,
               children: [
                 new Paragraph({
+                  alignment: rowIndex === 0 ? AlignmentType.CENTER : AlignmentType.LEFT,
                   children: [
                     new TextRun({
                       text: documentSafeText(row[columnIndex] || ""),
-                      bold: rowIndex === 0
+                      bold: rowIndex === 0,
+                      color: rowIndex === 0 ? "FFFFFF" : "1F2937"
                     })
                   ]
                 })
@@ -54382,17 +54338,6 @@
         })
       )
     });
-  }
-  function getExportColumns(pairs) {
-    const columns = /* @__PURE__ */ new Set();
-    pairs.forEach((pair) => {
-      pair.table.headers.forEach((header) => {
-        if (header.trim()) {
-          columns.add(header.trim());
-        }
-      });
-    });
-    return [...columns];
   }
   function documentSafeText(value) {
     return stripUnsupportedEmoji(replaceFlagEmojiWithCountryCodes(value)).replace(/\s+/g, " ").trim();
@@ -54473,9 +54418,6 @@
   }
   function sanitizeFilename(value) {
     return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9-_ ]/g, "").trim().replace(/\s+/g, "-").toLowerCase().slice(0, 80);
-  }
-  function getTemplateColumns() {
-    return columnsInput.value.split(/[\n,]/).map((column) => column.trim()).filter((column) => column.length > 0);
   }
   function formatDate(isoDate) {
     return new Date(isoDate).toLocaleString();
