@@ -55,23 +55,61 @@
       .resize-handle {
         position: fixed;
         left: 0;
-        bottom: 0;
+        top: 0;
         z-index: 10;
-        width: 22px;
-        height: 22px;
-        cursor: nesw-resize;
+        width: 10px;
+        height: 100vh;
+        cursor: ew-resize;
+        background: transparent;
+        transition: background 120ms ease;
       }
 
       .resize-handle::after {
         content: "";
         position: absolute;
-        left: 6px;
-        bottom: 6px;
-        width: 10px;
-        height: 10px;
-        border-left: 2px solid var(--text-muted);
-        border-bottom: 2px solid var(--text-muted);
-        opacity: 0.65;
+        left: 4px;
+        top: 50%;
+        width: 2px;
+        height: 44px;
+        border-radius: 999px;
+        background: var(--text-muted);
+        opacity: 0;
+        transform: translateY(-50%);
+        transition: opacity 120ms ease;
+      }
+
+      .resize-handle:hover,
+      body.is-resizing .resize-handle {
+        background: rgba(13, 153, 255, 0.08);
+      }
+
+      .resize-handle:hover::after,
+      body.is-resizing .resize-handle::after {
+        opacity: 0.75;
+      }
+
+      body.is-resizing {
+        cursor: ew-resize;
+        user-select: none;
+      }
+
+      .close-button {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 12;
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--text-muted);
+        font-size: 18px;
+        line-height: 1;
+        box-shadow: var(--shadow-soft);
       }
 
       .sidebar {
@@ -131,6 +169,11 @@
 
       .summary-row:last-child {
         border-bottom: 0;
+      }
+
+      .summary-reset {
+        width: 100%;
+        margin-top: 8px;
       }
 
       .field {
@@ -270,7 +313,7 @@
         min-height: 0;
         height: 100vh;
         overflow: auto;
-        padding: 28px;
+        padding: 42px 28px 28px;
       }
 
       .blocks {
@@ -370,7 +413,7 @@
 
       .block-grid {
         display: grid;
-        grid-template-columns: minmax(260px, 0.9fr) minmax(340px, 1.1fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 16px;
         align-items: start;
       }
@@ -455,10 +498,6 @@
           overflow: hidden;
         }
 
-        .block-grid {
-          grid-template-columns: 1fr;
-        }
-
         .sidebar {
           display: grid;
           grid-template-columns: minmax(150px, 0.8fr) minmax(260px, 1.2fr);
@@ -477,7 +516,7 @@
 
         .main {
           height: auto;
-          padding: 14px;
+          padding: 42px 14px 14px;
         }
 
         .panel {
@@ -505,6 +544,12 @@
         }
       }
 
+      @media (max-width: 560px) {
+        .block-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       @media (max-width: 430px) {
         .export-actions,
         .utility-actions {
@@ -515,6 +560,9 @@
   </head>
   <body>
     <div id="resizeHandle" class="resize-handle" title="Redimensionar plugin"></div>
+    <button id="closeButton" class="close-button" type="button" aria-label="Cerrar plugin">
+      &times;
+    </button>
     <main class="app">
       <aside class="sidebar">
         <div>
@@ -536,18 +584,12 @@
           <div class="actions export-actions" style="margin-top: 12px">
             <button id="exportPdfButton" class="button primary" type="button" disabled>
               <span class="button-icon">PDF</span>
-              Exportar
+              Exportar PDF
             </button>
             <button id="exportDocxButton" class="button primary" type="button" disabled>
               <span class="button-icon">W</span>
-              Word
+              Exportar Word
             </button>
-          </div>
-          <div class="actions utility-actions" style="margin-top: 8px">
-            <button id="resetButton" class="button" type="button" disabled>
-              Resetear
-            </button>
-            <button id="closeButton" class="button" type="button">Cerrar</button>
           </div>
         </section>
 
@@ -54065,7 +54107,6 @@
   // src/ui.ts
   var blocksContainer = getElement("blocksContainer");
   var exportSummary = getElement("exportSummary");
-  var resetButton = getElement("resetButton");
   var exportPdfButton = getElement("exportPdfButton");
   var exportDocxButton = getElement("exportDocxButton");
   var closeButton = getElement("closeButton");
@@ -54131,9 +54172,6 @@
       }
     });
   });
-  resetButton.addEventListener("click", () => {
-    postMessageToPlugin({ type: "reset" });
-  });
   closeButton.addEventListener("click", () => {
     postMessageToPlugin({ type: "close-plugin" });
   });
@@ -54144,12 +54182,12 @@
     void exportCurrentDocument("docx");
   });
   resizeHandle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
     resizeState = {
       startX: event.clientX,
-      startY: event.clientY,
-      startWidth: window.innerWidth,
-      startHeight: window.innerHeight
+      startWidth: window.innerWidth
     };
+    document.body.classList.add("is-resizing");
     resizeHandle.setPointerCapture(event.pointerId);
   });
   resizeHandle.addEventListener("pointermove", (event) => {
@@ -54160,15 +54198,17 @@
       type: "resize-ui",
       payload: {
         width: resizeState.startWidth - (event.clientX - resizeState.startX),
-        height: resizeState.startHeight + (event.clientY - resizeState.startY)
+        height: window.innerHeight
       }
     });
   });
   resizeHandle.addEventListener("pointerup", () => {
     resizeState = void 0;
+    document.body.classList.remove("is-resizing");
   });
   resizeHandle.addEventListener("pointercancel", () => {
     resizeState = void 0;
+    document.body.classList.remove("is-resizing");
   });
   window.onmessage = (event) => {
     const message = event.data.pluginMessage;
@@ -54202,14 +54242,12 @@
     const canExport = state2.document.pairs.length > 0;
     exportPdfButton.disabled = !canExport;
     exportDocxButton.disabled = !canExport;
-    resetButton.disabled = state2.blocks.length === 1 && !state2.blocks[0].screen && !state2.blocks[0].table;
     if (canExport) {
       setDefaultFilename(state2.document);
     }
   }
   function renderSidebarSummary(state2) {
     const completedPairs = state2.document.pairs;
-    const pendingBlocks = state2.blocks.filter((block) => !block.screen || !block.table);
     exportSummary.innerHTML = `
     <div class="summary-row">
       <span>Bloques totales</span>
@@ -54219,11 +54257,13 @@
       <span>Listos para exportar</span>
       <strong>${completedPairs.length}</strong>
     </div>
-    <div class="summary-row">
-      <span>Pendientes</span>
-      <strong>${pendingBlocks.length}</strong>
-    </div>
+    <button id="resetButton" class="button summary-reset" type="button" ${state2.blocks.length === 1 && !state2.blocks[0].screen && !state2.blocks[0].table ? "disabled" : ""}>
+      Limpiar bloques
+    </button>
   `;
+    getElement("resetButton").addEventListener("click", () => {
+      postMessageToPlugin({ type: "reset" });
+    });
   }
   function renderBlocks(state2) {
     const lastBlock = state2.blocks[state2.blocks.length - 1];
@@ -54305,7 +54345,18 @@
   `;
   }
   function exportCurrentDocument(format) {
-    if (!currentState || currentState.document.pairs.length === 0) {
+    if (!currentState) {
+      setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
+      return;
+    }
+    if (hasPartiallyLoadedBlock(currentState.blocks)) {
+      setStatus(
+        "Faltan recursos por cargar. Corrige el problema antes de exportar.",
+        true
+      );
+      return;
+    }
+    if (currentState.document.pairs.length === 0) {
       setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
       return;
     }
@@ -54336,6 +54387,9 @@
       );
     }
     setExportButtonsDisabled(false);
+  }
+  function hasPartiallyLoadedBlock(blocks) {
+    return blocks.some((block) => Boolean(block.screen) !== Boolean(block.table));
   }
   function exportPdf(document2) {
     const pdf = new E({ format: "a4", orientation: "landscape", unit: "pt" });
