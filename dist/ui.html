@@ -14,9 +14,12 @@
         --text-muted: var(--figma-color-text-secondary, #6b6b74);
         --border: var(--figma-color-border, #d8d8df);
         --brand: var(--figma-color-bg-brand, #0d99ff);
+        --brand-soft: rgba(13, 153, 255, 0.1);
         --brand-text: var(--figma-color-text-onbrand, #ffffff);
         --danger: var(--figma-color-text-danger, #d92d20);
         --success: #1f8a4c;
+        --shadow: 0 18px 45px rgba(17, 24, 39, 0.08);
+        --shadow-soft: 0 8px 24px rgba(17, 24, 39, 0.06);
         font-family:
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
           sans-serif;
@@ -28,7 +31,9 @@
 
       body {
         margin: 0;
-        background: var(--background);
+        background:
+          radial-gradient(circle at top left, rgba(13, 153, 255, 0.12), transparent 34%),
+          var(--background);
         color: var(--text);
         font-size: 13px;
       }
@@ -48,15 +53,17 @@
       .sidebar {
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        padding: 18px;
+        gap: 12px;
+        padding: 18px 16px;
         border-right: 1px solid var(--border);
-        background: var(--surface);
+        background: rgba(247, 247, 248, 0.86);
+        backdrop-filter: blur(18px);
       }
 
       .sidebar h1 {
         margin: 0 0 4px;
-        font-size: 20px;
+        font-size: 21px;
+        letter-spacing: -0.03em;
       }
 
       .sidebar p {
@@ -68,13 +75,18 @@
       .panel {
         padding: 14px;
         border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--background);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: var(--shadow-soft);
       }
 
       .panel h2 {
-        margin: 0 0 10px;
-        font-size: 13px;
+        margin: 0 0 11px;
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       .summary {
@@ -117,10 +129,12 @@
 
       .chip {
         display: inline-flex;
-        border: 1px solid var(--border);
+        border: 1px solid rgba(13, 153, 255, 0.22);
         border-radius: 999px;
-        padding: 4px 8px;
-        background: var(--surface);
+        padding: 5px 9px;
+        background: var(--brand-soft);
+        color: #075985;
+        font-weight: 600;
       }
 
       .field {
@@ -138,10 +152,20 @@
       .field textarea {
         width: 100%;
         border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 9px 10px;
+        border-radius: 12px;
+        padding: 10px 11px;
         background: var(--background);
         color: var(--text);
+        outline: none;
+        transition:
+          border-color 120ms ease,
+          box-shadow 120ms ease;
+      }
+
+      .field input:focus,
+      .field textarea:focus {
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(13, 153, 255, 0.12);
       }
 
       .field textarea {
@@ -156,23 +180,35 @@
 
       .button {
         border: 1px solid var(--border);
-        border-radius: 9px;
+        border-radius: 12px;
         padding: 10px 12px;
         cursor: pointer;
         background: var(--background);
         color: var(--text);
-        font-weight: 600;
+        font-weight: 700;
+        transition:
+          transform 120ms ease,
+          border-color 120ms ease,
+          box-shadow 120ms ease,
+          background 120ms ease;
       }
 
       .button.primary {
         border-color: var(--brand);
         background: var(--brand);
         color: var(--brand-text);
+        box-shadow: 0 10px 22px rgba(13, 153, 255, 0.2);
       }
 
       .button.secondary {
         border-color: var(--brand);
         color: var(--brand);
+        background: var(--brand-soft);
+      }
+
+      .button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-soft);
       }
 
       .button.small {
@@ -188,8 +224,9 @@
       .status {
         min-height: 38px;
         padding: 10px 12px;
-        border-radius: 10px;
-        background: var(--surface-strong);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.72);
         color: var(--text-muted);
         line-height: 1.35;
       }
@@ -202,7 +239,7 @@
         min-width: 0;
         max-height: 100vh;
         overflow: auto;
-        padding: 24px;
+        padding: 28px;
       }
 
       .blocks {
@@ -212,13 +249,13 @@
 
       .blocks-header {
         margin-bottom: 18px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid var(--border);
+        padding: 2px 2px 8px;
       }
 
       .blocks-header h2 {
         margin: 0 0 6px;
-        font-size: 22px;
+        font-size: 28px;
+        letter-spacing: -0.04em;
       }
 
       .blocks-header p {
@@ -241,12 +278,14 @@
         margin-bottom: 18px;
         padding: 18px;
         border: 1px solid var(--border);
-        border-radius: 16px;
-        background: var(--surface);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: var(--shadow);
       }
 
       .translation-block.complete {
         border-color: rgba(31, 138, 76, 0.5);
+        box-shadow: 0 18px 45px rgba(31, 138, 76, 0.1);
       }
 
       .block-heading {
@@ -258,7 +297,8 @@
 
       .block-heading h3 {
         margin: 0;
-        font-size: 18px;
+        font-size: 19px;
+        letter-spacing: -0.02em;
       }
 
       .block-grid {
@@ -273,7 +313,7 @@
         gap: 12px;
         padding: 14px;
         border: 1px solid var(--border);
-        border-radius: 12px;
+        border-radius: 18px;
         background: var(--background);
       }
 
@@ -284,14 +324,16 @@
       }
 
       .dot {
-        width: 10px;
-        height: 10px;
+        width: 11px;
+        height: 11px;
         border-radius: 999px;
-        background: var(--text-muted);
+        background: #cbd5e1;
+        box-shadow: 0 0 0 4px rgba(203, 213, 225, 0.24);
       }
 
       .dot.ok {
         background: var(--success);
+        box-shadow: 0 0 0 4px rgba(31, 138, 76, 0.14);
       }
 
       .screen-image {
@@ -299,7 +341,7 @@
         max-height: 360px;
         object-fit: contain;
         border: 1px solid var(--border);
-        border-radius: 12px;
+        border-radius: 16px;
         background: #ffffff;
       }
 
@@ -324,7 +366,7 @@
       th {
         padding: 10px;
         border: 1px solid var(--border);
-        background: #707070;
+        background: linear-gradient(180deg, #6b7280, #52525b);
         color: #ffffff;
         text-align: left;
       }
@@ -342,9 +384,50 @@
         margin-top: 2px;
       }
 
+      .empty-hero {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 22px;
+        align-items: center;
+        margin-bottom: 18px;
+        padding: 24px;
+        border: 1px solid rgba(13, 153, 255, 0.2);
+        border-radius: 24px;
+        background:
+          linear-gradient(135deg, rgba(13, 153, 255, 0.1), rgba(255, 255, 255, 0.86)),
+          var(--background);
+        box-shadow: var(--shadow);
+      }
+
+      .empty-hero h3 {
+        margin: 0 0 8px;
+        font-size: 24px;
+        letter-spacing: -0.04em;
+      }
+
+      .empty-hero p {
+        margin: 0;
+        color: var(--text-muted);
+        line-height: 1.55;
+      }
+
+      .empty-illustration {
+        display: grid;
+        place-items: center;
+        min-height: 150px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.64);
+      }
+
+      .empty-illustration svg {
+        width: 100%;
+        max-width: 220px;
+      }
+
       @media (max-width: 860px) {
         .app,
-        .block-grid {
+        .block-grid,
+        .empty-hero {
           grid-template-columns: 1fr;
         }
 
@@ -54007,18 +54090,52 @@
   function renderBlocks(state2) {
     const lastBlock = state2.blocks[state2.blocks.length - 1];
     const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
+    const isEmptyDocument = state2.document.pairs.length === 0 && state2.blocks.length === 1 && !state2.blocks[0].screen && !state2.blocks[0].table;
     blocksContainer.innerHTML = `
     <section class="blocks-header">
       <div>
-        <p class="eyebrow">Pantalla principal</p>
+        <p class="eyebrow">Documento</p>
         <h2>Bloques de pantalla + tabla</h2>
         <p>Captura cada pantalla con su tabla de traducciones. El documento se monta con los bloques completos.</p>
       </div>
     </section>
+    ${isEmptyDocument ? renderEmptyHero() : ""}
     ${state2.blocks.map((block, index2) => renderBlock(block, index2, state2.blocks.length)).join("")}
     ${canAddAnother ? `<button class="button secondary add-block" type="button" data-add-block="true">
             Anadir otra pantalla
           </button>` : ""}
+  `;
+  }
+  function renderEmptyHero() {
+    return `
+    <section class="empty-hero">
+      <div class="empty-illustration" aria-hidden="true">
+        <svg viewBox="0 0 220 160" role="img">
+          <defs>
+            <linearGradient id="cardGradient" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stop-color="#f7fbff" />
+              <stop offset="100%" stop-color="#edf5ff" />
+            </linearGradient>
+          </defs>
+          <rect x="22" y="22" width="176" height="116" rx="18" fill="url(#cardGradient)" />
+          <rect x="38" y="40" width="64" height="82" rx="12" fill="#ffffff" stroke="#cfe4ff" />
+          <rect x="118" y="42" width="64" height="16" rx="6" fill="#0d99ff" opacity="0.18" />
+          <rect x="118" y="70" width="64" height="12" rx="6" fill="#93c5fd" opacity="0.5" />
+          <rect x="118" y="92" width="52" height="12" rx="6" fill="#93c5fd" opacity="0.35" />
+          <circle cx="70" cy="70" r="16" fill="#0d99ff" opacity="0.16" />
+          <path d="M54 104h34" stroke="#0d99ff" stroke-width="6" stroke-linecap="round" opacity="0.35" />
+          <path d="M148 118l12 12 24-30" fill="none" stroke="#1f8a4c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div>
+        <p class="eyebrow">Empty page</p>
+        <h3>Empieza capturando una pantalla y su tabla</h3>
+        <p>
+          Selecciona un frame o imagen PNG en Figma, capturalo en el bloque y despues
+          selecciona la tabla de traducciones correspondiente.
+        </p>
+      </div>
+    </section>
   `;
   }
   function renderBlock(block, index2, totalBlocks) {
@@ -54138,7 +54255,7 @@
       y3 += 26;
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(13);
-      pdf.text(pair.screen.name, margin, y3);
+      pdf.text(documentSafeText(pair.screen.name), margin, y3);
       y3 += 14;
       const gap = 24;
       const leftWidth = (pageWidth - margin * 2 - gap) * 0.45;
@@ -54154,7 +54271,9 @@
     const columnCount = Math.max(table.headers.length, 1);
     const columnWidth = width / columnCount;
     const rowHeight = 30;
-    const allRows = [table.headers, ...table.rows];
+    const allRows = [table.headers, ...table.rows].map(
+      (row) => row.map((cell) => documentSafeText(cell))
+    );
     const maxRows = Math.max(1, Math.floor(maxHeight / rowHeight));
     const rows = allRows.slice(0, maxRows);
     pdf.setFontSize(7);
@@ -54207,7 +54326,7 @@
     const translationTable = buildDocxTranslationTable(pair.table);
     return [
       new Paragraph({
-        text: `${index2 + 1}. ${pair.screen.name}`,
+        text: `${index2 + 1}. ${documentSafeText(pair.screen.name)}`,
         heading: HeadingLevel.HEADING_1,
         spacing: { before: index2 === 0 ? 0 : 360, after: 120 }
       }),
@@ -54252,7 +54371,7 @@
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: row[columnIndex] || "",
+                      text: documentSafeText(row[columnIndex] || ""),
                       bold: rowIndex === 0
                     })
                   ]
@@ -54274,6 +54393,46 @@
       });
     });
     return [...columns];
+  }
+  function documentSafeText(value) {
+    return stripUnsupportedEmoji(replaceFlagEmojiWithCountryCodes(value)).replace(/\s+/g, " ").trim();
+  }
+  function replaceFlagEmojiWithCountryCodes(value) {
+    const codePoints = Array.from(value);
+    let output = "";
+    for (let index2 = 0; index2 < codePoints.length; index2 += 1) {
+      const first = regionalIndicatorLetter(codePoints[index2]);
+      const second = regionalIndicatorLetter(codePoints[index2 + 1] || "");
+      if (first && second) {
+        output += ` (${first}${second})`;
+        index2 += 1;
+      } else {
+        output += codePoints[index2];
+      }
+    }
+    return output;
+  }
+  function regionalIndicatorLetter(value) {
+    const codePoint = value.codePointAt(0);
+    if (!codePoint || codePoint < 127462 || codePoint > 127487) {
+      return "";
+    }
+    return String.fromCharCode(65 + codePoint - 127462);
+  }
+  function stripUnsupportedEmoji(value) {
+    return Array.from(value).filter((character) => {
+      const codePoint = character.codePointAt(0) || 0;
+      if (codePoint === 65038 || codePoint === 65039 || codePoint === 8205) {
+        return false;
+      }
+      if (codePoint >= 126976 && codePoint <= 129791) {
+        return false;
+      }
+      if (codePoint >= 9728 && codePoint <= 10175) {
+        return false;
+      }
+      return true;
+    }).join("");
   }
   function fitWithin(width, height, maxWidth, maxHeight) {
     const scale = Math.min(maxWidth / width, maxHeight / height, 1);
