@@ -1,8 +1,6 @@
 "use strict";
 (() => {
   var __defProp = Object.defineProperty;
-  var __defProps = Object.defineProperties;
-  var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
   var __getOwnPropSymbols = Object.getOwnPropertySymbols;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __propIsEnum = Object.prototype.propertyIsEnumerable;
@@ -18,7 +16,6 @@
       }
     return a;
   };
-  var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 
   // src/code.ts
   var TEMPLATE_COLUMNS = ["Neutro", "Voseado", "Portugues", "Ingles", "Frances"];
@@ -43,9 +40,8 @@
   var initialBlockId = createBlockId();
   var activeBlockId = initialBlockId;
   var blocks = [{ id: initialBlockId, name: "Bloque 1" }];
-  var uiLayout;
   figma.showUI(__html__, {
-    width: 720,
+    width: 960,
     height: 620,
     themeColors: true,
     title: "UI Translation Exporter"
@@ -53,10 +49,6 @@
   figma.ui.onmessage = async (message) => {
     if (message.type === "layout-ready") {
       applyInitialUiLayout(message.payload.availWidth, message.payload.availHeight);
-      return;
-    }
-    if (message.type === "resize-ui") {
-      resizeUi(message.payload.width, message.payload.height);
       return;
     }
     if (message.type === "state-request") {
@@ -100,41 +92,12 @@
   function applyInitialUiLayout(availWidth, availHeight) {
     const safeWidth = Number.isFinite(availWidth) && availWidth > 0 ? availWidth : 1440;
     const safeHeight = Number.isFinite(availHeight) && availHeight > 0 ? availHeight : 900;
-    const maxWidth = Math.round(Math.max(360, Math.floor(safeWidth * 0.5)));
-    const width = Math.round(clamp(maxWidth, 420, maxWidth));
+    const width = Math.round(Math.min(960, safeWidth));
     const height = Math.round(Math.max(420, safeHeight));
     const x = Math.max(0, safeWidth - width);
     const y = 0;
-    uiLayout = {
-      x,
-      y,
-      width,
-      height,
-      right: x + width,
-      maxWidth
-    };
     figma.ui.resize(width, height);
     figma.ui.reposition(x, y);
-  }
-  function resizeUi(width, _height) {
-    const layout = uiLayout;
-    const safeWidth = Math.round(clamp(width, 360, (layout == null ? void 0 : layout.maxWidth) || 900));
-    const safeHeight = Math.round((layout == null ? void 0 : layout.height) || 650);
-    if (layout) {
-      const x = Math.max(0, layout.right - safeWidth);
-      uiLayout = __spreadProps(__spreadValues({}, layout), {
-        x,
-        width: safeWidth,
-        height: safeHeight
-      });
-      figma.ui.resize(safeWidth, safeHeight);
-      figma.ui.reposition(x, layout.y);
-    } else {
-      figma.ui.resize(safeWidth, safeHeight);
-    }
-  }
-  function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
   }
   function postToUi(message) {
     figma.ui.postMessage(message);
@@ -290,14 +253,15 @@
     tableFrame.counterAxisSizingMode = "FIXED";
     tableFrame.itemSpacing = 0;
     tableFrame.strokesIncludedInLayout = true;
-    const columnWidth = 210;
-    const headerHeight = 54;
-    const rowHeight = 72;
+    const headerHeight = 48;
+    const rowHeight = 64;
     const borderColor = { r: 0.72, g: 0.72, b: 0.72 };
     const headerFill = { r: 0.43, g: 0.43, b: 0.43 };
-    const width = headers.length * columnWidth;
+    const width = 900;
+    const columnWidth = width / headers.length;
     const templateHeight = headerHeight + rows.length * rowHeight;
     tableFrame.resize(width, templateHeight);
+    tableFrame.cornerRadius = 12;
     const headerRow = createTemplateRow("Header", width);
     tableFrame.appendChild(headerRow);
     headers.forEach((header) => {
@@ -345,6 +309,7 @@
     row.primaryAxisSizingMode = "FIXED";
     row.counterAxisSizingMode = "AUTO";
     row.layoutSizingHorizontal = "FILL";
+    row.layoutSizingVertical = "HUG";
     row.itemSpacing = 0;
     row.strokesIncludedInLayout = true;
     row.resize(width, 1);
@@ -360,8 +325,10 @@
     cell.layoutMode = "VERTICAL";
     cell.primaryAxisSizingMode = "AUTO";
     cell.counterAxisSizingMode = "FIXED";
-    cell.layoutSizingHorizontal = "FIXED";
+    cell.layoutSizingHorizontal = "FILL";
     cell.layoutSizingVertical = "HUG";
+    cell.layoutGrow = 1;
+    cell.minHeight = options.height;
     cell.paddingTop = 14;
     cell.paddingRight = 16;
     cell.paddingBottom = 14;
@@ -372,11 +339,11 @@
     text.name = "Texto traduccion";
     text.fontName = REGULAR_FONT;
     text.fontSize = options.fontSize;
-    text.characters = options.text;
     text.fills = [{ type: "SOLID", color: options.textColor }];
     text.textAutoResize = "HEIGHT";
     text.layoutSizingHorizontal = "FILL";
     text.resize(options.width - 32, Math.max(1, options.height - 28));
+    text.characters = options.text;
     cell.appendChild(text);
     options.parent.appendChild(cell);
   }
