@@ -79,7 +79,6 @@ blocksContainer.addEventListener("click", (event) => {
   if (importTemplate) {
     postMessageToPlugin({
       type: "import-template-table",
-      payload: { columns: [] },
     });
   }
 });
@@ -163,14 +162,7 @@ function renderSidebarSummary(state: PluginState) {
   const completedPairs = state.document.pairs;
 
   exportSummary.innerHTML = `
-    <div class="summary-row">
-      <span>Bloques totales</span>
-      <strong>${state.blocks.length}</strong>
-    </div>
-    <div class="summary-row">
-      <span>Listos para exportar</span>
-      <strong>${completedPairs.length}</strong>
-    </div>
+    <strong>Exportar ${completedPairs.length} bloque${completedPairs.length === 1 ? "" : "s"}</strong>
     <button id="resetButton" class="button summary-reset" type="button" ${
       state.blocks.length === 1 && !state.blocks[0].screen && !state.blocks[0].table
         ? "disabled"

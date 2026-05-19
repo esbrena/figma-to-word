@@ -1,8 +1,3 @@
-export type SelectionSummary = {
-  count: number;
-  names: string[];
-};
-
 export type CapturedScreen = {
   id: string;
   name: string;
@@ -38,8 +33,6 @@ export type ExportDocument = {
 };
 
 export type PluginState = {
-  selection: SelectionSummary;
-  activeBlockId: string;
   blocks: TranslationBlock[];
   document: ExportDocument;
 };
@@ -57,10 +50,9 @@ export type UiToPluginMessage =
   | { type: "update-block-name"; payload: { blockId: string; name: string } }
   | { type: "capture-screen"; payload: { blockId: string } }
   | { type: "capture-table"; payload: { blockId: string } }
-  | { type: "import-template-table"; payload: { columns: string[] } }
+  | { type: "import-template-table" }
   | { type: "remove-block"; payload: { blockId: string } }
-  | { type: "reset" }
-  | { type: "close-plugin" };
+  | { type: "reset" };
 
 export type PluginToUiMessage =
   | { type: "state"; payload: PluginState }
