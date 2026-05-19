@@ -190,6 +190,10 @@ function renderBlocks(state: PluginState) {
   const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
 
   blocksContainer.innerHTML = `
+    <header class="app-header">
+      <h1>UI Translation Exporter</h1>
+      <p>Exporta pantallas UI junto a sus tablas de traduccion.</p>
+    </header>
     <section class="blocks-header">
       <h2>Construccion del documento</h2>
     </section>
@@ -203,6 +207,7 @@ function renderBlocks(state: PluginState) {
           </button>`
         : ""
     }
+    <p class="workflow-help">Completa un bloque con pantalla y tabla para habilitar la exportacion.</p>
   `;
 }
 
