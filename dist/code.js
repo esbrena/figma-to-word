@@ -61,7 +61,8 @@
     );
   }
   async function exportFrame(frame) {
-    const frameBounds = getBounds(frame) ?? {
+    var _a;
+    const frameBounds = (_a = getBounds(frame)) != null ? _a : {
       x: frame.x,
       y: frame.y,
       width: frame.width,
@@ -136,7 +137,7 @@
           height: Math.round(bounds.height),
           dataUrl: await exportNodeAsPng(node, getScaleForNode(node, 900))
         });
-      } catch {
+      } catch (e) {
       }
     }
     return imageBlocks;

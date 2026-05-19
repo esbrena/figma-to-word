@@ -8,7 +8,7 @@ const sharedOptions = {
   bundle: true,
   logLevel: "info",
   sourcemap: watch ? "inline" : false,
-  target: "es2020",
+  target: "es2017",
 };
 
 const codeOptions = {
@@ -42,7 +42,7 @@ const uiOptions = {
           const html = await readFile("src/ui.html", "utf8");
           const inlinedHtml = html.replace(
             '<script src="./ui.js"></script>',
-            `<script>\n${script.text}\n</script>`,
+            () => `<script>\n${script.text}\n</script>`,
           );
 
           await writeFile(`${outdir}/ui.html`, inlinedHtml);

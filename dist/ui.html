@@ -11197,10 +11197,10 @@
       var $TypeError = TypeError;
       var PromiseCapability = function(C2) {
         var resolve, reject;
-        this.promise = new C2(function($resolve, $reject) {
+        this.promise = new C2(function($$resolve, $$reject) {
           if (resolve !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
-          resolve = $resolve;
-          reject = $reject;
+          resolve = $$resolve;
+          reject = $$reject;
         });
         this.resolve = aCallable(resolve);
         this.reject = aCallable(reject);
@@ -12446,8 +12446,8 @@
       var charAt = uncurryThis("".charAt);
       var replace = uncurryThis("".replace);
       var stringSlice = uncurryThis("".slice);
-      var SUBSTITUTION_SYMBOLS = /\$([<script src="./ui.js"></script>'`]|\d{1,2}|<[^>]*>)/g;
-      var SUBSTITUTION_SYMBOLS_NO_NAMED = /\$([<script src="./ui.js"></script>'`]|\d{1,2})/g;
+      var SUBSTITUTION_SYMBOLS = /\$([$&'`]|\d{1,2}|<[^>]*>)/g;
+      var SUBSTITUTION_SYMBOLS_NO_NAMED = /\$([$&'`]|\d{1,2})/g;
       module.exports = function(matched, str, position, captures, namedCaptures, replacement) {
         var tailPos = position + matched.length;
         var m4 = captures.length;
@@ -23517,7 +23517,7 @@
         var fn = arr.slice || arr.set;
         if (fn) {
           cache[
-            /** @type {`${import('.').TypedArrayName}`} */
+            /** @type {`$${import('.').TypedArrayName}`} */
             "$" + typedArray
           ] = /** @type {import('./types').BoundSlice | import('./types').BoundSet} */
           // @ts-expect-error TODO FIXME
@@ -23528,9 +23528,9 @@
     var tryTypedArrays = function tryAllTypedArrays(value) {
       var found = false;
       forEach2(
-        /** @type {Record<`\${import('.').TypedArrayName}`, Getter>} */
+        /** @type {Record<`\$${import('.').TypedArrayName}`, Getter>} */
         cache,
-        /** @type {(getter: Getter, name: `\${import('.').TypedArrayName}`) => void} */
+        /** @type {(getter: Getter, name: `\$${import('.').TypedArrayName}`) => void} */
         function(getter, typedArray) {
           if (!found) {
             try {
@@ -23548,9 +23548,9 @@
     var trySlices = function tryAllSlices(value) {
       var found = false;
       forEach2(
-        /** @type {Record<`\${import('.').TypedArrayName}`, Getter>} */
+        /** @type {Record<`\$${import('.').TypedArrayName}`, Getter>} */
         cache,
-        /** @type {(getter: Getter, name: `\${import('.').TypedArrayName}`) => void} */
+        /** @type {(getter: Getter, name: `\$${import('.').TypedArrayName}`) => void} */
         function(getter, name) {
           if (!found) {
             try {
@@ -23916,7 +23916,7 @@
       var debugEnvRegex = /^$/;
       if (process$1.env.NODE_DEBUG) {
         var debugEnv = process$1.env.NODE_DEBUG;
-        debugEnv = debugEnv.replace(/[|\\{}()[\]^$+?.]/g, "\\<script src="./ui.js"></script>").replace(/\*/g, ".*").replace(/,/g, "$|^").toUpperCase();
+        debugEnv = debugEnv.replace(/[|\\{}()[\]^$+?.]/g, "\\$&").replace(/\*/g, ".*").replace(/,/g, "$|^").toUpperCase();
         debugEnvRegex = new RegExp("^" + debugEnv + "$", "i");
       }
       exports$1.debuglog = function(set) {
@@ -46472,10 +46472,11 @@
       }
     }
     decodeImage() {
+      var _a2;
       if (this._inflator.err) {
         throw new Error(`Error while decompressing the data: ${this._inflator.err}`);
       }
-      const data = this._isAnimated ? (this._frames?.at(0)).data : this._inflator.result;
+      const data = this._isAnimated ? ((_a2 = this._frames) == null ? void 0 : _a2.at(0)).data : this._inflator.result;
       if (this._filterMethod !== FilterMethod.ADAPTIVE) {
         throw new Error(`Filter method ${this._filterMethod} not supported`);
       }
@@ -47678,7 +47679,7 @@
     function He(t3, e3, r3, n3, i3) {
       var a4 = new q(e3 || this.boundingBox, r3 || this.xStep, n3 || this.yStep, this.gState, i3 || this.matrix);
       a4.stream = this.stream;
-      var o3 = t3 + "$" + this.cloneIndex++ + "$";
+      var o3 = t3 + "$$" + this.cloneIndex++ + "$$";
       return Yt2(o3, a4), a4;
     }
     var We = function(t3, e3) {
@@ -54020,6 +54021,7 @@
     pdf.save(`${getFilenameWithoutExtension()}.pdf`);
   }
   function writeFrameToPdf(pdf, frame, margin, startY, pageWidth, pageHeight) {
+    var _a2;
     let y3 = startY;
     y3 = ensurePdfSpace(pdf, y3, 80, margin, pageHeight);
     pdf.setFont("helvetica", "bold");
@@ -54043,7 +54045,7 @@
         pdf.text(`${block.name} (x:${block.x} y:${block.y})`, margin, y3);
         y3 += 11;
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(Math.min(Math.max(block.fontSize ?? 10, 8), 13));
+        pdf.setFontSize(Math.min(Math.max((_a2 = block.fontSize) != null ? _a2 : 10, 8), 13));
         const lines = pdf.splitTextToSize(block.text, pageWidth - margin * 2);
         for (const line of lines) {
           y3 = ensurePdfSpace(pdf, y3, 14, margin, pageHeight);
@@ -54210,7 +54212,8 @@
     };
   }
   function dataUrlToUint8Array(dataUrl) {
-    const base64 = dataUrl.split(",")[1] ?? "";
+    var _a2;
+    const base64 = (_a2 = dataUrl.split(",")[1]) != null ? _a2 : "";
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let index2 = 0; index2 < binary.length; index2 += 1) {
@@ -54229,10 +54232,11 @@
     URL.revokeObjectURL(url);
   }
   function setDefaultFilename(document2) {
+    var _a2, _b2;
     if (filenameInput.value.trim()) {
       return;
     }
-    const firstFrame = document2.frames[0]?.name ?? "figma-export";
+    const firstFrame = (_b2 = (_a2 = document2.frames[0]) == null ? void 0 : _a2.name) != null ? _b2 : "figma-export";
     filenameInput.value = sanitizeFilename(firstFrame);
   }
   function getFilenameWithoutExtension() {
