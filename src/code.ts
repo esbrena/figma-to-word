@@ -278,8 +278,9 @@ async function importTemplateTable(columns: string[]) {
   const borderColor: RGB = { r: 0.72, g: 0.72, b: 0.72 };
   const headerFill: RGB = { r: 0.43, g: 0.43, b: 0.43 };
   const width = headers.length * columnWidth;
+  const templateHeight = headerHeight + rows.length * rowHeight;
 
-  tableFrame.resize(width, headerHeight + rows.length * rowHeight);
+  tableFrame.resize(width, templateHeight);
 
   const headerRow = createTemplateRow("Header", width);
   tableFrame.appendChild(headerRow);
@@ -314,7 +315,7 @@ async function importTemplateTable(columns: string[]) {
   tableFrame.strokes = [{ type: "SOLID", color: borderColor }];
   tableFrame.strokeWeight = 1;
   tableFrame.x = figma.viewport.center.x - width / 2;
-  tableFrame.y = figma.viewport.center.y - height / 2;
+  tableFrame.y = figma.viewport.center.y - templateHeight / 2;
   figma.currentPage.appendChild(tableFrame);
   figma.currentPage.selection = [tableFrame];
   figma.viewport.scrollAndZoomIntoView([tableFrame]);
