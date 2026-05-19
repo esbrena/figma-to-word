@@ -46,6 +46,20 @@ export type PluginState = {
 
 export type UiToPluginMessage =
   | { type: "state-request" }
+  | {
+      type: "layout-ready";
+      payload: {
+        availWidth: number;
+        availHeight: number;
+      };
+    }
+  | {
+      type: "resize-ui";
+      payload: {
+        width: number;
+        height: number;
+      };
+    }
   | { type: "add-block" }
   | { type: "update-block-name"; payload: { blockId: string; name: string } }
   | { type: "capture-screen"; payload: { blockId: string } }

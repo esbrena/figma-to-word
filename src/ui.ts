@@ -35,8 +35,17 @@ const exportDocxButton = getElement<HTMLButtonElement>("exportDocxButton");
 const closeButton = getElement<HTMLButtonElement>("closeButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
 const statusMessage = getElement<HTMLDivElement>("statusMessage");
+const resizeHandle = getElement<HTMLDivElement>("resizeHandle");
 
 let currentState: PluginState | null = null;
+let resizeState:
+  | {
+      startX: number;
+      startY: number;
+      startWidth: number;
+      startHeight: number;
+    }
+  | undefined;
 
 blocksContainer.addEventListener("click", (event) => {
   const target = event.target;
@@ -124,6 +133,38 @@ exportDocxButton.addEventListener("click", () => {
   void exportCurrentDocument("docx");
 });
 
+resizeHandle.addEventListener("pointerdown", (event) => {
+  resizeState = {
+    startX: event.clientX,
+    startY: event.clientY,
+    startWidth: window.innerWidth,
+    startHeight: window.innerHeight,
+  };
+  resizeHandle.setPointerCapture(event.pointerId);
+});
+
+resizeHandle.addEventListener("pointermove", (event) => {
+  if (!resizeState) {
+    return;
+  }
+
+  postMessageToPlugin({
+    type: "resize-ui",
+    payload: {
+      width: resizeState.startWidth - (event.clientX - resizeState.startX),
+      height: resizeState.startHeight + (event.clientY - resizeState.startY),
+    },
+  });
+});
+
+resizeHandle.addEventListener("pointerup", () => {
+  resizeState = undefined;
+});
+
+resizeHandle.addEventListener("pointercancel", () => {
+  resizeState = undefined;
+});
+
 window.onmessage = (event: MessageEvent) => {
   const message = event.data.pluginMessage as PluginToUiMessage | undefined;
 
@@ -147,6 +188,13 @@ window.onmessage = (event: MessageEvent) => {
   }
 };
 
+postMessageToPlugin({
+  type: "layout-ready",
+  payload: {
+    availWidth: window.screen.availWidth,
+    availHeight: window.screen.availHeight,
+  },
+});
 postMessageToPlugin({ type: "state-request" });
 
 function renderState(state: PluginState) {

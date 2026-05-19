@@ -40,15 +40,35 @@ let nextBlockNumber = 1;
 const initialBlockId = createBlockId();
 let activeBlockId = initialBlockId;
 let blocks: TranslationBlock[] = [{ id: initialBlockId, name: "Bloque 1" }];
+let uiLayout:
+  | {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      right: number;
+      maxUserHeight: number;
+    }
+  | undefined;
 
 figma.showUI(__html__, {
-  width: 900,
-  height: 650,
+  width: 720,
+  height: 620,
   themeColors: true,
   title: "UI Translation Exporter",
 });
 
 figma.ui.onmessage = async (message: UiToPluginMessage) => {
+  if (message.type === "layout-ready") {
+    applyInitialUiLayout(message.payload.availWidth, message.payload.availHeight);
+    return;
+  }
+
+  if (message.type === "resize-ui") {
+    resizeUi(message.payload.width, message.payload.height);
+    return;
+  }
+
   if (message.type === "state-request") {
     postState();
     return;
@@ -96,6 +116,52 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
 
 figma.on("selectionchange", postState);
 postState();
+
+function applyInitialUiLayout(availWidth: number, availHeight: number) {
+  const safeWidth = Number.isFinite(availWidth) && availWidth > 0 ? availWidth : 1440;
+  const safeHeight = Number.isFinite(availHeight) && availHeight > 0 ? availHeight : 900;
+  const margin = 16;
+  const width = Math.round(clamp(Math.floor(safeWidth * 0.5), 420, 900));
+  const height = Math.round(clamp(safeHeight - margin * 2, 520, safeHeight - margin));
+  const x = Math.max(margin, safeWidth - width - margin);
+  const y = margin;
+
+  uiLayout = {
+    x,
+    y,
+    width,
+    height,
+    right: x + width,
+    maxUserHeight: Math.max(420, safeHeight - margin),
+  };
+
+  figma.ui.resize(width, height);
+  figma.ui.reposition(x, y);
+}
+
+function resizeUi(width: number, height: number) {
+  const layout = uiLayout;
+  const safeWidth = Math.round(clamp(width, 360, 1200));
+  const safeHeight = Math.round(clamp(height, 420, layout?.maxUserHeight || 1200));
+
+  if (layout) {
+    const x = Math.max(8, layout.right - safeWidth);
+    uiLayout = {
+      ...layout,
+      x,
+      width: safeWidth,
+      height: safeHeight,
+    };
+    figma.ui.resize(safeWidth, safeHeight);
+    figma.ui.reposition(x, layout.y);
+  } else {
+    figma.ui.resize(safeWidth, safeHeight);
+  }
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 function postToUi(message: PluginToUiMessage) {
   figma.ui.postMessage(message);
