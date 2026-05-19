@@ -1,0 +1,10 @@
+{
+  "name": "Figma to Word/PDF",
+  "id": "figma-to-word-pdf-exporter",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "capabilities": [],
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page"
+}

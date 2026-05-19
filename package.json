@@ -1,0 +1,38 @@
+{
+  "name": "figma-to-word",
+  "version": "1.0.0",
+  "description": "Figma plugin to export selected frames as copyable PDF or Word documents.",
+  "private": true,
+  "main": "dist/code.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/esbrena/figma-to-word.git"
+  },
+  "keywords": [
+    "figma",
+    "plugin",
+    "pdf",
+    "docx"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/esbrena/figma-to-word/issues"
+  },
+  "homepage": "https://github.com/esbrena/figma-to-word#readme",
+  "dependencies": {
+    "docx": "^9.6.1",
+    "jspdf": "^4.2.1"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.126.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3"
+  }
+}
