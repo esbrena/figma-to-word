@@ -20,12 +20,14 @@ export type TranslationTable = {
 
 export type TranslationPair = {
   id: string;
+  name: string;
   screen: CapturedScreen;
   table: TranslationTable;
 };
 
 export type TranslationBlock = {
   id: string;
+  name: string;
   screen?: CapturedScreen;
   table?: TranslationTable;
 };
@@ -45,6 +47,7 @@ export type PluginState = {
 export type UiToPluginMessage =
   | { type: "state-request" }
   | { type: "add-block" }
+  | { type: "update-block-name"; payload: { blockId: string; name: string } }
   | { type: "capture-screen"; payload: { blockId: string } }
   | { type: "capture-table"; payload: { blockId: string } }
   | { type: "import-template-table"; payload: { columns: string[] } }

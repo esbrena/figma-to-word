@@ -39,9 +39,14 @@ type TableTextBlock = {
 let nextBlockNumber = 1;
 const initialBlockId = createBlockId();
 let activeBlockId = initialBlockId;
-let blocks: TranslationBlock[] = [{ id: initialBlockId }];
+let blocks: TranslationBlock[] = [{ id: initialBlockId, name: "Bloque 1" }];
 
-figma.showUI(__html__, { width: 1040, height: 780, themeColors: true });
+figma.showUI(__html__, {
+  width: 900,
+  height: 650,
+  themeColors: true,
+  title: "UI Translation Exporter",
+});
 
 figma.ui.onmessage = async (message: UiToPluginMessage) => {
   if (message.type === "state-request") {
@@ -51,6 +56,11 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
 
   if (message.type === "add-block") {
     addBlock();
+    return;
+  }
+
+  if (message.type === "update-block-name") {
+    updateBlockName(message.payload.blockId, message.payload.name);
     return;
   }
 
@@ -120,7 +130,8 @@ function getSelectionSummary(): SelectionSummary {
 }
 
 function addBlock() {
-  const block = { id: createBlockId() };
+  const blockNumber = nextBlockNumber;
+  const block = { id: createBlockId(), name: `Bloque ${blockNumber}` };
   blocks = [...blocks, block];
   activeBlockId = block.id;
   postState();
@@ -138,7 +149,8 @@ function removeBlock(blockId: string) {
 }
 
 function resetBlocks() {
-  const block = { id: createBlockId() };
+  const blockNumber = nextBlockNumber;
+  const block = { id: createBlockId(), name: `Bloque ${blockNumber}` };
   blocks = [block];
   activeBlockId = block.id;
   postNotice("Documento reiniciado.", "info");
@@ -167,14 +179,23 @@ function updateBlock(blockId: string, patch: Partial<TranslationBlock>) {
   activeBlockId = blockId;
 }
 
+function updateBlockName(blockId: string, name: string) {
+  const safeName = name.trim().slice(0, 80);
+  updateBlock(blockId, {
+    name: safeName || "Bloque",
+  });
+  postState();
+}
+
 function getCompletedPairs(): TranslationPair[] {
   return blocks
     .filter(
       (block): block is TranslationPair =>
-        Boolean(block.screen) && Boolean(block.table),
+        Boolean(block.name) && Boolean(block.screen) && Boolean(block.table),
     )
     .map((block) => ({
       id: block.id,
+      name: block.name,
       screen: block.screen,
       table: block.table,
     }));

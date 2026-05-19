@@ -6,6 +6,7 @@ import {
   HeadingLevel,
   ImageRun,
   PageOrientation,
+  PageBreak,
   Packer,
   Paragraph,
   ShadingType,
@@ -27,7 +28,6 @@ import type {
 } from "./types";
 
 const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
-const screenCountSummary = getElement<HTMLDivElement>("screenCountSummary");
 const exportSummary = getElement<HTMLDivElement>("exportSummary");
 const resetButton = getElement<HTMLButtonElement>("resetButton");
 const exportPdfButton = getElement<HTMLButtonElement>("exportPdfButton");
@@ -84,6 +84,28 @@ blocksContainer.addEventListener("click", (event) => {
       payload: { columns: [] },
     });
   }
+});
+
+blocksContainer.addEventListener("change", (event) => {
+  const target = event.target;
+
+  if (!(target instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const blockId = target.dataset.blockName;
+
+  if (!blockId) {
+    return;
+  }
+
+  postMessageToPlugin({
+    type: "update-block-name",
+    payload: {
+      blockId,
+      name: target.value,
+    },
+  });
 });
 
 resetButton.addEventListener("click", () => {
@@ -146,11 +168,6 @@ function renderSidebarSummary(state: PluginState) {
   const completedPairs = state.document.pairs;
   const pendingBlocks = state.blocks.filter((block) => !block.screen || !block.table);
 
-  screenCountSummary.innerHTML = `
-    <strong>${completedPairs.length}</strong>
-    <span>pantalla${completedPairs.length === 1 ? "" : "s"} en previsualizacion</span>
-  `;
-
   exportSummary.innerHTML = `
     <div class="summary-row">
       <span>Bloques totales</span>
@@ -192,10 +209,17 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
   const isComplete = Boolean(block.screen && block.table);
 
   return `
-    <article class="translation-block ${isComplete ? "complete" : ""}">
+    <article class="translation-block">
       <div class="block-heading">
-        <div>
-          <h3>Bloque ${index + 1}</h3>
+        <div class="block-title">
+          <input
+            class="block-name-input"
+            type="text"
+            value="${escapeHtml(block.name || `Bloque ${index + 1}`)}"
+            data-block-name="${block.id}"
+            aria-label="Nombre del bloque ${index + 1}"
+          />
+          ${isComplete ? '<span class="complete-check" aria-label="Bloque completo"></span>' : ""}
         </div>
         ${
           totalBlocks > 1
@@ -208,7 +232,6 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
       <div class="block-grid">
         <section class="block-panel">
           <div class="step-title">
-            <span class="${block.screen ? "dot ok" : "dot"}"></span>
             <strong>Pantalla</strong>
           </div>
           ${
@@ -224,7 +247,6 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
         </section>
         <section class="block-panel">
           <div class="step-title">
-            <span class="${block.table ? "dot ok" : "dot"}"></span>
             <strong>Tabla de traducciones</strong>
           </div>
           ${
@@ -339,7 +361,7 @@ function exportPdf(document: ExportDocument) {
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(13);
-    pdf.text(documentSafeText(pair.screen.name), margin, y);
+    pdf.text(documentSafeText(pair.name), margin, y);
     y += 14;
 
     const gap = 24;
@@ -410,16 +432,49 @@ async function exportDocx(document: ExportDocument) {
       heading: HeadingLevel.TITLE,
     }),
     new Paragraph({
-      children: [new TextRun(`Fecha de generacion: ${formatDate(document.generatedAt)}`)],
+      children: [
+        new TextRun({
+          text: `Fecha de generacion: ${formatDate(document.generatedAt)}`,
+          font: "Verdana",
+        }),
+      ],
       spacing: { after: 240 },
     }),
   ];
 
   document.pairs.forEach((pair, index) => {
     children.push(...buildDocxPair(pair, index));
+
+    if (index < document.pairs.length - 1) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+    }
   });
 
   const doc = new DocxDocument({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: "Verdana",
+            size: 20,
+          },
+        },
+        title: {
+          run: {
+            font: "Verdana",
+            size: 36,
+            bold: true,
+          },
+        },
+        heading1: {
+          run: {
+            font: "Verdana",
+            size: 26,
+            bold: true,
+          },
+        },
+      },
+    },
     sections: [
       {
         properties: {
@@ -446,15 +501,28 @@ async function exportDocx(document: ExportDocument) {
 function buildDocxPair(pair: TranslationPair, index: number): FileChild[] {
   const imageSize = fitWithin(pair.screen.width, pair.screen.height, 300, 360);
   const translationTable = buildDocxTranslationTable(pair.table);
+  const outerBorder = {
+    style: BorderStyle.SINGLE,
+    color: "D3D3D3",
+    size: 2,
+  };
 
   return [
     new Paragraph({
-      text: `${index + 1}. ${documentSafeText(pair.screen.name)}`,
+      text: `${index + 1}. ${documentSafeText(pair.name)}`,
       heading: HeadingLevel.HEADING_1,
       spacing: { before: index === 0 ? 0 : 360, after: 120 },
     }),
     new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: outerBorder,
+        bottom: outerBorder,
+        left: outerBorder,
+        right: outerBorder,
+        insideHorizontal: outerBorder,
+        insideVertical: outerBorder,
+      },
       rows: [
         new TableRow({
           children: [
@@ -529,6 +597,7 @@ function buildDocxTranslationTable(table: TranslationTable) {
                         text: documentSafeText(row[columnIndex] || ""),
                         bold: rowIndex === 0,
                         color: rowIndex === 0 ? "FFFFFF" : "1F2937",
+                        font: "Verdana",
                       }),
                     ],
                   }),
@@ -634,7 +703,7 @@ function setDefaultFilename(document: ExportDocument) {
     return;
   }
 
-  const firstScreen = document.pairs[0]?.screen.name || "traducciones-ui";
+  const firstScreen = document.pairs[0]?.name || "traducciones-ui";
   filenameInput.value = sanitizeFilename(firstScreen);
 }
 
