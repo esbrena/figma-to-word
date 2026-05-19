@@ -89,7 +89,12 @@ function getSelectedFrames(): FrameNode[] {
 }
 
 async function exportFrame(frame: FrameNode): Promise<ExportFrame> {
-  const frameBounds = getBounds(frame);
+  const frameBounds = getBounds(frame) ?? {
+    x: frame.x,
+    y: frame.y,
+    width: frame.width,
+    height: frame.height,
+  };
   const previewDataUrl = await exportNodeAsPng(frame, getScaleForNode(frame, 1600));
   const textBlocks = collectTextBlocks(frame, frameBounds);
   const tables = collectTables(frame, frameBounds);

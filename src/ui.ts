@@ -1,6 +1,7 @@
 import {
   AlignmentType,
   Document,
+  FileChild,
   HeadingLevel,
   ImageRun,
   Packer,
@@ -427,7 +428,7 @@ function ensurePdfSpace(
 }
 
 async function exportDocx(document: ExportDocument) {
-  const children = [
+  const children: FileChild[] = [
     new Paragraph({
       text: "Documento exportado desde Figma",
       heading: HeadingLevel.TITLE,
@@ -451,7 +452,7 @@ async function exportDocx(document: ExportDocument) {
 }
 
 function buildDocxFrame(frame: ExportFrame) {
-  const children = [
+  const children: FileChild[] = [
     new Paragraph({
       text: frame.name,
       heading: HeadingLevel.HEADING_1,
