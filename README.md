@@ -1,21 +1,26 @@
 # Figma to Word/PDF
 
-Plugin de Figma para generar un documento exportable desde los frames seleccionados.
+Plugin de Figma para generar documentos de traducciones de pantallas UI.
 El flujo cubre:
 
-1. Abrir el plugin y ver la indicacion de seleccionar frames.
-2. Seleccionar uno o varios frames en Figma.
-3. Pulsar **Generar** para crear una previsualizacion.
-4. Revisar un documento con captura visual, textos copiables, imagenes detectadas y tablas inferidas.
-5. Definir el nombre del archivo.
-6. Pulsar **Exportar** para descargar PDF o Word (`.docx`).
+1. Abrir el plugin y seleccionar una pantalla PNG o frame de Figma.
+2. Pulsar **Capturar pantalla seleccionada**.
+3. Seleccionar una tabla editable con traducciones.
+4. Pulsar **Capturar tabla seleccionada**.
+5. Repetir el proceso tantas veces como pantallas/tablas se quieran documentar.
+6. Definir el nombre del archivo y descargar PDF o Word (`.docx`).
 
 ## Que exporta
 
-- Una captura visual de cada frame seleccionado.
-- Capas de texto como texto real en PDF/Word para que desarrollo pueda copiar y pegar.
-- Imagenes detectadas a partir de capas con relleno de imagen.
-- Tablas inferidas cuando una capa contenedora se llama `tabla` o `table`; sus textos se ordenan por posicion.
+- Nombre del archivo y fecha de generacion.
+- Una captura JPG de cada pantalla seleccionada.
+- Al lado de cada pantalla, una tabla Word/PDF con las mismas columnas detectadas en Figma.
+- Tablas de traducciones extraidas desde capas de texto editables.
+
+Si la seleccion no parece una tabla valida, el plugin muestra un error. Tambien
+incluye un boton para importar una tabla plantilla editable en Figma con el
+diseño de cabecera gris y filas blancas. Las columnas de la plantilla se pueden
+configurar antes de importarla y despues se pueden editar directamente en Figma.
 
 ## Desarrollo
 

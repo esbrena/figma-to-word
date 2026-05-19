@@ -1,59 +1,55 @@
 export type SelectionSummary = {
-  frameCount: number;
-  frameNames: string[];
+  count: number;
+  names: string[];
 };
 
-export type TextBlock = {
+export type CapturedScreen = {
   id: string;
   name: string;
-  text: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fontSize?: number;
-  color?: string;
-};
-
-export type ImageBlock = {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
   width: number;
   height: number;
   dataUrl: string;
 };
 
-export type InferredTable = {
+export type TranslationTable = {
   id: string;
   name: string;
+  headers: string[];
   rows: string[][];
 };
 
-export type ExportFrame = {
+export type TranslationPair = {
   id: string;
-  name: string;
-  width: number;
-  height: number;
-  previewDataUrl: string;
-  textBlocks: TextBlock[];
-  imageBlocks: ImageBlock[];
-  tables: InferredTable[];
+  screen: CapturedScreen;
+  table: TranslationTable;
+};
+
+export type DraftState = {
+  screen?: CapturedScreen;
+  table?: TranslationTable;
 };
 
 export type ExportDocument = {
   generatedAt: string;
-  frames: ExportFrame[];
+  pairs: TranslationPair[];
+};
+
+export type PluginState = {
+  selection: SelectionSummary;
+  draft: DraftState;
+  document: ExportDocument;
 };
 
 export type UiToPluginMessage =
-  | { type: "selection-summary-request" }
-  | { type: "generate-document" }
+  | { type: "state-request" }
+  | { type: "capture-screen" }
+  | { type: "capture-table" }
+  | { type: "import-template-table"; payload: { columns: string[] } }
+  | { type: "remove-pair"; payload: { id: string } }
+  | { type: "clear-pairs" }
   | { type: "close-plugin" };
 
 export type PluginToUiMessage =
-  | { type: "selection-summary"; payload: SelectionSummary }
-  | { type: "generation-started" }
-  | { type: "document-ready"; payload: ExportDocument }
-  | { type: "generation-error"; payload: { message: string } };
+  | { type: "state"; payload: PluginState }
+  | { type: "busy"; payload: { message: string } }
+  | { type: "notice"; payload: { message: string; level: "info" | "error" } };

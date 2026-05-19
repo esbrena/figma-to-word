@@ -1,6 +1,6 @@
 import {
   AlignmentType,
-  Document,
+  Document as DocxDocument,
   FileChild,
   HeadingLevel,
   ImageRun,
@@ -15,55 +15,79 @@ import {
 import { jsPDF } from "jspdf";
 import type {
   ExportDocument,
-  ExportFrame,
-  InferredTable,
+  PluginState,
   PluginToUiMessage,
-  TextBlock,
+  TranslationPair,
+  TranslationTable,
   UiToPluginMessage,
 } from "./types";
 
-const generateButton = getElement<HTMLButtonElement>("generateButton");
+const captureScreenButton = getElement<HTMLButtonElement>("captureScreenButton");
+const captureTableButton = getElement<HTMLButtonElement>("captureTableButton");
+const importTableButton = getElement<HTMLButtonElement>("importTableButton");
+const clearButton = getElement<HTMLButtonElement>("clearButton");
 const exportButton = getElement<HTMLButtonElement>("exportButton");
 const closeButton = getElement<HTMLButtonElement>("closeButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
 const formatSelect = getElement<HTMLSelectElement>("formatSelect");
+const columnsInput = getElement<HTMLTextAreaElement>("columnsInput");
 const selectionSummary = getElement<HTMLDivElement>("selectionSummary");
+const draftSummary = getElement<HTMLDivElement>("draftSummary");
 const previewContainer = getElement<HTMLDivElement>("previewContainer");
 const statusMessage = getElement<HTMLDivElement>("statusMessage");
 
-let currentDocument: ExportDocument | null = null;
-let selectedFrameCount = 0;
+let currentState: PluginState | null = null;
 
-generateButton.addEventListener("click", () => {
-  setStatus("Generando documento desde los frames seleccionados...");
-  currentDocument = null;
-  renderEmptyPreview("La previsualizacion aparecera aqui cuando termine la generacion.");
-  exportButton.disabled = true;
-  postMessageToPlugin({ type: "generate-document" });
+captureScreenButton.addEventListener("click", () => {
+  setStatus("Validando y capturando pantalla...");
+  postMessageToPlugin({ type: "capture-screen" });
+});
+
+captureTableButton.addEventListener("click", () => {
+  setStatus("Validando tabla de traducciones...");
+  postMessageToPlugin({ type: "capture-table" });
+});
+
+importTableButton.addEventListener("click", () => {
+  postMessageToPlugin({
+    type: "import-template-table",
+    payload: { columns: getTemplateColumns() },
+  });
+});
+
+clearButton.addEventListener("click", () => {
+  postMessageToPlugin({ type: "clear-pairs" });
+});
+
+closeButton.addEventListener("click", () => {
+  postMessageToPlugin({ type: "close-plugin" });
 });
 
 exportButton.addEventListener("click", async () => {
-  if (!currentDocument) {
-    setStatus("Primero genera una previsualizacion.");
+  if (!currentState || currentState.document.pairs.length === 0) {
+    setStatus("Campos obligatorios: captura al menos una pantalla y una tabla.", true);
     return;
   }
+
+  const exportDocument: ExportDocument = {
+    ...currentState.document,
+    generatedAt: new Date().toISOString(),
+  };
 
   exportButton.disabled = true;
   setStatus("Preparando descarga...");
 
   try {
     if (formatSelect.value === "docx") {
-      await exportDocx(currentDocument);
+      await exportDocx(exportDocument);
     } else {
-      exportPdf(currentDocument);
+      exportPdf(exportDocument);
     }
 
     setStatus("Archivo listo. Si tu navegador lo solicita, confirma la descarga.");
   } catch (error) {
     setStatus(
-      error instanceof Error
-        ? error.message
-        : "No se pudo exportar el documento.",
+      error instanceof Error ? error.message : "No se pudo exportar el documento.",
       true,
     );
   } finally {
@@ -71,8 +95,18 @@ exportButton.addEventListener("click", async () => {
   }
 });
 
-closeButton.addEventListener("click", () => {
-  postMessageToPlugin({ type: "close-plugin" });
+previewContainer.addEventListener("click", (event) => {
+  const target = event.target;
+
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const pairId = target.dataset.removePair;
+
+  if (pairId) {
+    postMessageToPlugin({ type: "remove-pair", payload: { id: pairId } });
+  }
 });
 
 window.onmessage = (event: MessageEvent) => {
@@ -82,60 +116,70 @@ window.onmessage = (event: MessageEvent) => {
     return;
   }
 
-  if (message.type === "selection-summary") {
-    selectedFrameCount = message.payload.frameCount;
-    generateButton.disabled = selectedFrameCount === 0;
-    selectionSummary.innerHTML = renderSelectionSummary(
-      message.payload.frameCount,
-      message.payload.frameNames,
-    );
+  if (message.type === "state") {
+    currentState = message.payload;
+    renderState(message.payload);
     return;
   }
 
-  if (message.type === "generation-started") {
-    generateButton.disabled = true;
-    exportButton.disabled = true;
-    setStatus("Leyendo capas, textos e imagenes...");
+  if (message.type === "busy") {
+    setStatus(message.payload.message);
     return;
   }
 
-  if (message.type === "document-ready") {
-    currentDocument = message.payload;
-    generateButton.disabled = selectedFrameCount === 0;
-    exportButton.disabled = false;
-    setDefaultFilename(message.payload);
-    renderPreview(message.payload);
-    setStatus("Previsualizacion generada. Define el nombre y exporta el archivo.");
-    return;
-  }
-
-  if (message.type === "generation-error") {
-    generateButton.disabled = selectedFrameCount === 0;
-    exportButton.disabled = true;
-    setStatus(message.payload.message, true);
+  if (message.type === "notice") {
+    setStatus(message.payload.message, message.payload.level === "error");
   }
 };
 
-postMessageToPlugin({ type: "selection-summary-request" });
-renderEmptyPreview("Selecciona frames en Figma y pulsa Generar.");
+postMessageToPlugin({ type: "state-request" });
+renderEmptyPreview();
 
-function postMessageToPlugin(message: UiToPluginMessage) {
-  parent.postMessage({ pluginMessage: message }, "*");
+function renderState(state: PluginState) {
+  selectionSummary.innerHTML = renderSelection(state);
+  draftSummary.innerHTML = renderDraft(state);
+  exportButton.disabled = state.document.pairs.length === 0;
+  clearButton.disabled =
+    state.document.pairs.length === 0 && !state.draft.screen && !state.draft.table;
+
+  if (state.document.pairs.length === 0) {
+    renderEmptyPreview();
+  } else {
+    renderPreview(state.document);
+    setDefaultFilename(state.document);
+  }
 }
 
-function renderSelectionSummary(frameCount: number, frameNames: string[]) {
-  if (frameCount === 0) {
+function renderSelection(state: PluginState) {
+  if (state.selection.count === 0) {
     return `
-      <strong>No hay frames seleccionados.</strong>
-      <span>Selecciona uno o varios frames en Figma para poder generar el documento.</span>
+      <strong>Nada seleccionado</strong>
+      <span>Selecciona una pantalla o una tabla en Figma y pulsa el boton correspondiente.</span>
     `;
   }
 
   return `
-    <strong>${frameCount} frame${frameCount === 1 ? "" : "s"} seleccionado${
-      frameCount === 1 ? "" : "s"
-    }.</strong>
-    <span>${frameNames.map(escapeHtml).join(", ")}</span>
+    <strong>${state.selection.count} elemento${
+      state.selection.count === 1 ? "" : "s"
+    } seleccionado${state.selection.count === 1 ? "" : "s"}</strong>
+    <span>${state.selection.names.map(escapeHtml).join(", ")}</span>
+  `;
+}
+
+function renderDraft(state: PluginState) {
+  const screen = state.draft.screen;
+  const table = state.draft.table;
+
+  return `
+    <div class="draft-row ${screen ? "complete" : ""}">
+      <span>Pantalla</span>
+      <strong>${screen ? escapeHtml(screen.name) : "Obligatoria"}</strong>
+    </div>
+    <div class="draft-row ${table ? "complete" : ""}">
+      <span>Tabla</span>
+      <strong>${table ? escapeHtml(table.name) : "Obligatoria"}</strong>
+    </div>
+    <p>Cuando ambos campos estan capturados, se anade una entrada al documento.</p>
   `;
 }
 
@@ -144,410 +188,259 @@ function renderPreview(document: ExportDocument) {
     <section class="document-preview">
       <header class="document-header">
         <p class="eyebrow">Previsualizacion</p>
-        <h2>Documento exportable</h2>
-        <p>${document.frames.length} frame${
-          document.frames.length === 1 ? "" : "s"
-        } procesado${document.frames.length === 1 ? "" : "s"}</p>
+        <h2>Documento de traducciones</h2>
+        <p>${document.pairs.length} pantalla${
+          document.pairs.length === 1 ? "" : "s"
+        } preparada${document.pairs.length === 1 ? "" : "s"} para exportar.</p>
       </header>
-      ${document.frames.map(renderFramePreview).join("")}
+      ${document.pairs.map(renderPairPreview).join("")}
     </section>
   `;
 }
 
-function renderFramePreview(frame: ExportFrame) {
+function renderPairPreview(pair: TranslationPair, index: number) {
   return `
-    <article class="frame-preview">
-      <div class="frame-heading">
+    <article class="pair-preview">
+      <div class="pair-heading">
         <div>
-          <p class="eyebrow">Frame</p>
-          <h3>${escapeHtml(frame.name)}</h3>
+          <p class="eyebrow">Pantalla ${index + 1}</p>
+          <h3>${escapeHtml(pair.screen.name)}</h3>
         </div>
-        <span>${frame.width} x ${frame.height}px</span>
+        <button class="button small" type="button" data-remove-pair="${pair.id}">
+          Eliminar
+        </button>
       </div>
-      <img class="frame-image" src="${frame.previewDataUrl}" alt="${escapeHtml(
-        frame.name,
-      )}" />
-      ${renderTextBlocks(frame.textBlocks)}
-      ${renderTables(frame.tables)}
-      ${renderImages(frame)}
+      <div class="pair-content">
+        <img class="screen-image" src="${pair.screen.dataUrl}" alt="${escapeHtml(
+          pair.screen.name,
+        )}" />
+        ${renderTranslationTable(pair.table)}
+      </div>
     </article>
   `;
 }
 
-function renderTextBlocks(blocks: TextBlock[]) {
-  if (blocks.length === 0) {
-    return `<p class="empty-note">No se han encontrado capas de texto en este frame.</p>`;
-  }
-
+function renderTranslationTable(table: TranslationTable) {
   return `
-    <section class="preview-section">
-      <h4>Textos copiables (${blocks.length})</h4>
-      <div class="text-block-list">
-        ${blocks
-          .map(
-            (block) => `
-              <div class="text-block">
-                <span>${escapeHtml(block.name)} | x:${block.x} y:${block.y}</span>
-                <p>${escapeHtml(block.text).replace(/\n/g, "<br />")}</p>
-              </div>
-            `,
-          )
-          .join("")}
-      </div>
-    </section>
+    <div class="table-wrapper">
+      <strong>${escapeHtml(table.name)}</strong>
+      <table>
+        <thead>
+          <tr>${table.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${table.rows
+            .map(
+              (row) => `
+                <tr>${table.headers
+                  .map((_, index) => `<td>${escapeHtml(row[index] || "")}</td>`)
+                  .join("")}</tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
-function renderTables(tables: InferredTable[]) {
-  if (tables.length === 0) {
-    return "";
-  }
-
-  return `
-    <section class="preview-section">
-      <h4>Tablas inferidas</h4>
-      ${tables
-        .map(
-          (table) => `
-            <div class="table-wrapper">
-              <strong>${escapeHtml(table.name)}</strong>
-              <table>
-                <tbody>
-                  ${table.rows
-                    .map(
-                      (row) => `
-                        <tr>${row
-                          .map((cell) => `<td>${escapeHtml(cell)}</td>`)
-                          .join("")}</tr>
-                      `,
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-            </div>
-          `,
-        )
-        .join("")}
-    </section>
-  `;
-}
-
-function renderImages(frame: ExportFrame) {
-  if (frame.imageBlocks.length === 0) {
-    return "";
-  }
-
-  return `
-    <section class="preview-section">
-      <h4>Imagenes detectadas (${frame.imageBlocks.length})</h4>
-      <div class="image-grid">
-        ${frame.imageBlocks
-          .map(
-            (image) => `
-              <figure>
-                <img src="${image.dataUrl}" alt="${escapeHtml(image.name)}" />
-                <figcaption>${escapeHtml(image.name)}</figcaption>
-              </figure>
-            `,
-          )
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderEmptyPreview(message: string) {
+function renderEmptyPreview() {
   previewContainer.innerHTML = `
     <div class="empty-preview">
-      <h2>Figma to Word/PDF</h2>
-      <p>${escapeHtml(message)}</p>
+      <h2>Plugin de traducciones UI</h2>
+      <p>Captura una pantalla y una tabla de traducciones para crear el documento.</p>
       <ol>
-        <li>Selecciona los frames que quieres exportar.</li>
-        <li>Pulsa <strong>Generar</strong> para crear la previsualizacion.</li>
-        <li>Define el nombre del archivo y pulsa <strong>Exportar</strong>.</li>
+        <li>Selecciona la pantalla PNG o frame y pulsa <strong>Capturar pantalla</strong>.</li>
+        <li>Selecciona la tabla editable de traducciones y pulsa <strong>Capturar tabla</strong>.</li>
+        <li>Si no tienes tabla, pulsa <strong>Importar tabla plantilla</strong>, editala en Figma y capturala.</li>
+        <li>Repite el proceso para tantas pantallas como necesites.</li>
       </ol>
     </div>
   `;
 }
 
 function exportPdf(document: ExportDocument) {
-  const pdf = new jsPDF({ format: "a4", unit: "pt" });
+  const pdf = new jsPDF({ format: "a4", orientation: "landscape", unit: "pt" });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 42;
-  let y = margin;
+  const margin = 36;
+  const title = getFilenameWithoutExtension();
 
   pdf.setProperties({
-    title: getFilenameWithoutExtension(),
-    subject: "Exportacion de frames de Figma",
+    title,
+    subject: "Documento de traducciones UI",
   });
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(20);
-  pdf.text("Documento exportado desde Figma", margin, y);
-  y += 26;
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  pdf.text(`Generado: ${new Date(document.generatedAt).toLocaleString()}`, margin, y);
-  y += 28;
-
-  document.frames.forEach((frame, index) => {
+  document.pairs.forEach((pair, index) => {
     if (index > 0) {
       pdf.addPage();
-      y = margin;
     }
 
-    y = writeFrameToPdf(pdf, frame, margin, y, pageWidth, pageHeight);
+    let y = margin;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(18);
+    pdf.text(title, margin, y);
+    y += 18;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(`Fecha de generacion: ${formatDate(document.generatedAt)}`, margin, y);
+    y += 26;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text(pair.screen.name, margin, y);
+    y += 14;
+
+    const gap = 24;
+    const leftWidth = (pageWidth - margin * 2 - gap) * 0.45;
+    const rightWidth = pageWidth - margin * 2 - gap - leftWidth;
+    const maxContentHeight = pageHeight - y - margin;
+    const imageSize = fitWithin(pair.screen.width, pair.screen.height, leftWidth, maxContentHeight);
+
+    pdf.addImage(pair.screen.dataUrl, "JPEG", margin, y, imageSize.width, imageSize.height);
+    drawPdfTable(pdf, pair.table, margin + leftWidth + gap, y, rightWidth, maxContentHeight);
   });
 
-  pdf.save(`${getFilenameWithoutExtension()}.pdf`);
-}
-
-function writeFrameToPdf(
-  pdf: jsPDF,
-  frame: ExportFrame,
-  margin: number,
-  startY: number,
-  pageWidth: number,
-  pageHeight: number,
-) {
-  let y = startY;
-
-  y = ensurePdfSpace(pdf, y, 80, margin, pageHeight);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(16);
-  pdf.text(frame.name, margin, y);
-  y += 18;
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  pdf.text(`${frame.width} x ${frame.height}px`, margin, y);
-  y += 16;
-
-  const imageSize = fitWithin(frame.width, frame.height, pageWidth - margin * 2, 260);
-  y = ensurePdfSpace(pdf, y, imageSize.height + 24, margin, pageHeight);
-  pdf.addImage(frame.previewDataUrl, "PNG", margin, y, imageSize.width, imageSize.height);
-  y += imageSize.height + 24;
-
-  if (frame.textBlocks.length > 0) {
-    y = writePdfSectionTitle(pdf, "Textos copiables", margin, y, pageHeight);
-
-    for (const block of frame.textBlocks) {
-      y = ensurePdfSpace(pdf, y, 34, margin, pageHeight);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(9);
-      pdf.text(`${block.name} (x:${block.x} y:${block.y})`, margin, y);
-      y += 11;
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(Math.min(Math.max(block.fontSize ?? 10, 8), 13));
-
-      const lines = pdf.splitTextToSize(block.text, pageWidth - margin * 2);
-      for (const line of lines) {
-        y = ensurePdfSpace(pdf, y, 14, margin, pageHeight);
-        pdf.text(line, margin, y);
-        y += 14;
-      }
-      y += 8;
-    }
-  }
-
-  if (frame.tables.length > 0) {
-    y = writePdfSectionTitle(pdf, "Tablas inferidas", margin, y, pageHeight);
-    for (const table of frame.tables) {
-      y = drawPdfTable(pdf, table, margin, y, pageWidth - margin * 2, pageHeight);
-      y += 16;
-    }
-  }
-
-  return y;
-}
-
-function writePdfSectionTitle(
-  pdf: jsPDF,
-  title: string,
-  margin: number,
-  y: number,
-  pageHeight: number,
-) {
-  y = ensurePdfSpace(pdf, y, 28, margin, pageHeight);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text(title, margin, y);
-  return y + 16;
+  pdf.save(`${title}.pdf`);
 }
 
 function drawPdfTable(
   pdf: jsPDF,
-  table: InferredTable,
-  margin: number,
-  startY: number,
-  width: number,
-  pageHeight: number,
-) {
-  let y = ensurePdfSpace(pdf, startY, 34, margin, pageHeight);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10);
-  pdf.text(table.name, margin, y);
-  y += 10;
-
-  const columnCount = Math.max(...table.rows.map((row) => row.length));
-  const columnWidth = width / columnCount;
-  const rowHeight = 24;
-
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(8);
-
-  for (const row of table.rows) {
-    y = ensurePdfSpace(pdf, y, rowHeight + 4, margin, pageHeight);
-
-    row.forEach((cell, columnIndex) => {
-      const x = margin + columnIndex * columnWidth;
-      pdf.rect(x, y, columnWidth, rowHeight);
-      const lines = pdf.splitTextToSize(cell, columnWidth - 8).slice(0, 2);
-      pdf.text(lines, x + 4, y + 10);
-    });
-
-    y += rowHeight;
-  }
-
-  return y;
-}
-
-function ensurePdfSpace(
-  pdf: jsPDF,
+  table: TranslationTable,
+  x: number,
   y: number,
-  needed: number,
-  margin: number,
-  pageHeight: number,
+  width: number,
+  maxHeight: number,
 ) {
-  if (y + needed <= pageHeight - margin) {
-    return y;
-  }
+  const columnCount = Math.max(table.headers.length, 1);
+  const columnWidth = width / columnCount;
+  const rowHeight = 30;
+  const allRows = [table.headers, ...table.rows];
+  const maxRows = Math.max(1, Math.floor(maxHeight / rowHeight));
+  const rows = allRows.slice(0, maxRows);
 
-  pdf.addPage();
-  return margin;
+  pdf.setFontSize(7);
+
+  rows.forEach((row, rowIndex) => {
+    row.forEach((cell, columnIndex) => {
+      const cellX = x + columnIndex * columnWidth;
+      const cellY = y + rowIndex * rowHeight;
+
+      if (rowIndex === 0) {
+        pdf.setFillColor(110, 110, 110);
+        pdf.rect(cellX, cellY, columnWidth, rowHeight, "FD");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont("helvetica", "bold");
+      } else {
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(cellX, cellY, columnWidth, rowHeight, "FD");
+        pdf.setTextColor(35, 35, 35);
+        pdf.setFont("helvetica", "normal");
+      }
+
+      const lines = pdf.splitTextToSize(cell || "", columnWidth - 8).slice(0, 3);
+      pdf.text(lines, cellX + 4, cellY + 10);
+    });
+  });
+
+  pdf.setTextColor(35, 35, 35);
+
+  if (allRows.length > rows.length) {
+    pdf.text("Tabla truncada en PDF por espacio disponible.", x, y + rows.length * rowHeight + 12);
+  }
 }
 
 async function exportDocx(document: ExportDocument) {
   const children: FileChild[] = [
     new Paragraph({
-      text: "Documento exportado desde Figma",
+      text: getFilenameWithoutExtension(),
       heading: HeadingLevel.TITLE,
     }),
     new Paragraph({
-      children: [
-        new TextRun(`Generado: ${new Date(document.generatedAt).toLocaleString()}`),
-      ],
+      children: [new TextRun(`Fecha de generacion: ${formatDate(document.generatedAt)}`)],
+      spacing: { after: 240 },
     }),
   ];
 
-  for (const frame of document.frames) {
-    children.push(...buildDocxFrame(frame));
-  }
+  document.pairs.forEach((pair, index) => {
+    children.push(...buildDocxPair(pair, index));
+  });
 
-  const doc = new Document({
+  const doc = new DocxDocument({
     sections: [{ children }],
   });
   const blob = await Packer.toBlob(doc);
   downloadBlob(blob, `${getFilenameWithoutExtension()}.docx`);
 }
 
-function buildDocxFrame(frame: ExportFrame) {
-  const children: FileChild[] = [
+function buildDocxPair(pair: TranslationPair, index: number): FileChild[] {
+  const imageSize = fitWithin(pair.screen.width, pair.screen.height, 300, 360);
+  const translationTable = buildDocxTranslationTable(pair.table);
+
+  return [
     new Paragraph({
-      text: frame.name,
+      text: `${index + 1}. ${pair.screen.name}`,
       heading: HeadingLevel.HEADING_1,
-      spacing: { before: 360, after: 120 },
+      spacing: { before: index === 0 ? 0 : 360, after: 120 },
     }),
-    new Paragraph({
-      text: `${frame.width} x ${frame.height}px`,
-      spacing: { after: 160 },
-    }),
-  ];
-
-  const previewSize = fitWithin(frame.width, frame.height, 560, 360);
-  children.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [
-        new ImageRun({
-          type: "png",
-          data: dataUrlToUint8Array(frame.previewDataUrl),
-          transformation: previewSize,
-        }),
-      ],
-    }),
-  );
-
-  children.push(
-    new Paragraph({
-      text: "Textos copiables",
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 240, after: 80 },
-    }),
-  );
-
-  if (frame.textBlocks.length === 0) {
-    children.push(new Paragraph("No se han encontrado capas de texto."));
-  } else {
-    for (const block of frame.textBlocks) {
-      children.push(
-        new Paragraph({
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
           children: [
-            new TextRun({
-              text: `${block.name} (x:${block.x} y:${block.y})`,
-              bold: true,
+            new TableCell({
+              width: { size: 45, type: WidthType.PERCENTAGE },
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new ImageRun({
+                      type: "jpg",
+                      data: dataUrlToUint8Array(pair.screen.dataUrl),
+                      transformation: imageSize,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 55, type: WidthType.PERCENTAGE },
+              children: [translationTable],
             }),
           ],
         }),
-        new Paragraph({
-          children: [new TextRun(block.text)],
-          spacing: { after: 120 },
-        }),
-      );
-    }
-  }
+      ],
+    }),
+  ];
+}
 
-  if (frame.tables.length > 0) {
-    children.push(
-      new Paragraph({
-        text: "Tablas inferidas",
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 240, after: 80 },
-      }),
-    );
-
-    for (const table of frame.tables) {
-      children.push(
-        new Paragraph({
-          children: [new TextRun({ text: table.name, bold: true })],
-        }),
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: table.rows.map(
-            (row) =>
-              new TableRow({
-                children: row.map(
-                  (cell) =>
-                    new TableCell({
-                      children: [new Paragraph(cell)],
-                    }),
-                ),
+function buildDocxTranslationTable(table: TranslationTable) {
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [table.headers, ...table.rows].map(
+      (row, rowIndex) =>
+        new TableRow({
+          children: table.headers.map(
+            (_, columnIndex) =>
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: row[columnIndex] || "",
+                        bold: rowIndex === 0,
+                      }),
+                    ],
+                  }),
+                ],
               }),
           ),
         }),
-      );
-    }
-  }
-
-  return children;
+    ),
+  });
 }
 
-function fitWithin(
-  width: number,
-  height: number,
-  maxWidth: number,
-  maxHeight: number,
-) {
+function fitWithin(width: number, height: number, maxWidth: number, maxHeight: number) {
   const scale = Math.min(maxWidth / width, maxHeight / height, 1);
 
   return {
@@ -557,7 +450,7 @@ function fitWithin(
 }
 
 function dataUrlToUint8Array(dataUrl: string) {
-  const base64 = dataUrl.split(",")[1] ?? "";
+  const base64 = dataUrl.split(",")[1] || "";
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
 
@@ -584,12 +477,12 @@ function setDefaultFilename(document: ExportDocument) {
     return;
   }
 
-  const firstFrame = document.frames[0]?.name ?? "figma-export";
-  filenameInput.value = sanitizeFilename(firstFrame);
+  const firstScreen = document.pairs[0]?.screen.name || "traducciones-ui";
+  filenameInput.value = sanitizeFilename(firstScreen);
 }
 
 function getFilenameWithoutExtension() {
-  return sanitizeFilename(filenameInput.value.trim() || "figma-export");
+  return sanitizeFilename(filenameInput.value.trim() || "traducciones-ui") || "traducciones-ui";
 }
 
 function sanitizeFilename(value: string) {
@@ -601,6 +494,17 @@ function sanitizeFilename(value: string) {
     .replace(/\s+/g, "-")
     .toLowerCase()
     .slice(0, 80);
+}
+
+function getTemplateColumns() {
+  return columnsInput.value
+    .split(/[\n,]/)
+    .map((column) => column.trim())
+    .filter((column) => column.length > 0);
+}
+
+function formatDate(isoDate: string) {
+  return new Date(isoDate).toLocaleString();
 }
 
 function setStatus(message: string, isError = false) {
@@ -615,6 +519,10 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function postMessageToPlugin(message: UiToPluginMessage) {
+  parent.postMessage({ pluginMessage: message }, "*");
 }
 
 function getElement<T extends HTMLElement>(id: string): T {
