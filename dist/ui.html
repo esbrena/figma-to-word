@@ -35,7 +35,6 @@
 
       button,
       input,
-      select,
       textarea {
         font: inherit;
       }
@@ -78,29 +77,50 @@
         font-size: 13px;
       }
 
-      .summary,
-      .draft-summary {
+      .summary {
         display: grid;
         gap: 8px;
         line-height: 1.35;
       }
 
-      .draft-row {
+      .screen-count {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        align-items: baseline;
         gap: 8px;
-        padding: 8px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
       }
 
-      .draft-row span {
+      .screen-count strong {
+        font-size: 28px;
+      }
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .summary-row:last-child {
+        border-bottom: 0;
+      }
+
+      .muted {
         color: var(--text-muted);
       }
 
-      .draft-row.complete strong {
-        color: var(--success);
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .chip {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: var(--surface);
       }
 
       .field {
@@ -115,7 +135,6 @@
       }
 
       .field input,
-      .field select,
       .field textarea {
         width: 100%;
         border: 1px solid var(--border);
@@ -126,7 +145,7 @@
       }
 
       .field textarea {
-        min-height: 72px;
+        min-height: 68px;
         resize: vertical;
       }
 
@@ -149,6 +168,11 @@
         border-color: var(--brand);
         background: var(--brand);
         color: var(--brand-text);
+      }
+
+      .button.secondary {
+        border-color: var(--brand);
+        color: var(--brand);
       }
 
       .button.small {
@@ -174,45 +198,32 @@
         color: var(--danger);
       }
 
-      .preview {
+      .main {
         min-width: 0;
         max-height: 100vh;
         overflow: auto;
         padding: 24px;
       }
 
-      .empty-preview,
-      .document-preview {
-        max-width: 940px;
+      .blocks {
+        max-width: 1040px;
         margin: 0 auto;
       }
 
-      .empty-preview {
-        display: grid;
-        gap: 12px;
-        padding: 36px;
-        border: 1px dashed var(--border);
-        border-radius: 18px;
-        color: var(--text-muted);
-      }
-
-      .empty-preview h2,
-      .document-header h2,
-      .pair-heading h3 {
-        margin: 0;
-        color: var(--text);
-      }
-
-      .empty-preview ol {
-        margin: 0;
-        padding-left: 18px;
-        line-height: 1.7;
-      }
-
-      .document-header {
-        margin-bottom: 22px;
+      .blocks-header {
+        margin-bottom: 18px;
         padding-bottom: 16px;
         border-bottom: 1px solid var(--border);
+      }
+
+      .blocks-header h2 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+
+      .blocks-header p {
+        margin: 0;
+        color: var(--text-muted);
       }
 
       .eyebrow {
@@ -224,37 +235,78 @@
         text-transform: uppercase;
       }
 
-      .pair-preview {
+      .translation-block {
         display: grid;
         gap: 16px;
-        margin-bottom: 24px;
+        margin-bottom: 18px;
         padding: 18px;
         border: 1px solid var(--border);
         border-radius: 16px;
         background: var(--surface);
       }
 
-      .pair-heading {
+      .translation-block.complete {
+        border-color: rgba(31, 138, 76, 0.5);
+      }
+
+      .block-heading {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 12px;
       }
 
-      .pair-content {
+      .block-heading h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .block-grid {
         display: grid;
-        grid-template-columns: minmax(240px, 0.9fr) minmax(300px, 1.1fr);
-        gap: 18px;
+        grid-template-columns: minmax(260px, 0.9fr) minmax(340px, 1.1fr);
+        gap: 16px;
         align-items: start;
+      }
+
+      .block-panel {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--background);
+      }
+
+      .step-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--text-muted);
+      }
+
+      .dot.ok {
+        background: var(--success);
       }
 
       .screen-image {
         width: 100%;
-        max-height: 520px;
+        max-height: 360px;
         object-fit: contain;
         border: 1px solid var(--border);
         border-radius: 12px;
         background: #ffffff;
+      }
+
+      .empty-note {
+        margin: 0;
+        color: var(--text-muted);
+        line-height: 1.45;
       }
 
       .table-wrapper {
@@ -285,9 +337,14 @@
         line-height: 1.35;
       }
 
-      @media (max-width: 820px) {
+      .add-block {
+        width: 100%;
+        margin-top: 2px;
+      }
+
+      @media (max-width: 860px) {
         .app,
-        .pair-content {
+        .block-grid {
           grid-template-columns: 1fr;
         }
 
@@ -303,10 +360,7 @@
       <aside class="sidebar">
         <div>
           <h1>UI Translation Exporter</h1>
-          <p>
-            Crea un documento con pantalla e idiomas traducidos para que desarrollo lo
-            pueda consultar facilmente.
-          </p>
+          <p>Exporta pantallas UI junto a sus tablas de traduccion.</p>
         </div>
 
         <section class="panel">
@@ -317,67 +371,66 @@
         </section>
 
         <section class="panel">
-          <h2>1. Pantalla obligatoria</h2>
-          <div class="actions">
-            <button id="captureScreenButton" class="button primary" type="button">
-              Capturar pantalla seleccionada
-            </button>
+          <h2>Pantallas anadidas</h2>
+          <div id="screenCountSummary" class="screen-count">
+            <strong>0</strong>
+            <span>pantallas en previsualizacion</span>
           </div>
         </section>
 
         <section class="panel">
-          <h2>2. Tabla obligatoria</h2>
-          <div class="actions">
-            <button id="captureTableButton" class="button primary" type="button">
-              Capturar tabla seleccionada
-            </button>
+          <h2>Columnas a exportar</h2>
+          <div id="columnsSummary" class="chips">
+            <span class="muted">Captura una tabla para ver columnas.</span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Resumen de exportacion</h2>
+          <div id="exportSummary" class="summary"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Tabla plantilla</h2>
+          <div class="field" style="margin-top: 0">
+            <label for="columnsInput">Columnas editables de la plantilla</label>
+            <textarea id="columnsInput">Neutro, Voseado, Portugues, Ingles, Frances</textarea>
+          </div>
+          <div class="actions" style="margin-top: 12px">
             <button id="importTableButton" class="button" type="button">
               Importar tabla plantilla
             </button>
           </div>
-          <div class="field">
-            <label for="columnsInput">Columnas de la plantilla</label>
-            <textarea id="columnsInput">Neutro, Voseado, Portugues, Ingles, Frances</textarea>
-          </div>
         </section>
 
         <section class="panel">
-          <h2>Entradas pendientes</h2>
-          <div id="draftSummary" class="draft-summary"></div>
-        </section>
-
-        <section class="panel">
-          <h2>3. Exportar</h2>
-          <div class="field">
+          <h2>Exportar</h2>
+          <div class="field" style="margin-top: 0">
             <label for="filenameInput">Nombre del archivo</label>
             <input id="filenameInput" type="text" placeholder="traducciones-ui" />
           </div>
-
-          <div class="field">
-            <label for="formatSelect">Formato</label>
-            <select id="formatSelect">
-              <option value="pdf">PDF</option>
-              <option value="docx">Word (.docx)</option>
-            </select>
-          </div>
-
           <div class="actions" style="margin-top: 12px">
-            <button id="exportButton" class="button primary" type="button" disabled>
-              Descargar
+            <button id="exportPdfButton" class="button primary" type="button" disabled>
+              Exportar PDF
             </button>
-            <button id="clearButton" class="button" type="button" disabled>
-              Limpiar documento
+            <button id="exportDocxButton" class="button primary" type="button" disabled>
+              Exportar Word
+            </button>
+            <button id="resetButton" class="button" type="button" disabled>
+              Resetear
             </button>
             <button id="closeButton" class="button" type="button">Cerrar</button>
           </div>
         </section>
 
         <div id="statusMessage" class="status" data-state="info">
-          Captura una pantalla y una tabla para habilitar la descarga.
+          Completa un bloque con pantalla y tabla para habilitar la exportacion.
         </div>
       </aside>
 
-      <section id="previewContainer" class="preview" aria-live="polite"></section>
+      <section class="main">
+        <div id="blocksContainer" class="blocks"></div>
+      </section>
     </main>
     <script>
 "use strict";
@@ -53819,27 +53872,51 @@
   })();
 
   // src/ui.ts
-  var captureScreenButton = getElement("captureScreenButton");
-  var captureTableButton = getElement("captureTableButton");
+  var blocksContainer = getElement("blocksContainer");
+  var selectionSummary = getElement("selectionSummary");
+  var screenCountSummary = getElement("screenCountSummary");
+  var columnsSummary = getElement("columnsSummary");
+  var exportSummary = getElement("exportSummary");
   var importTableButton = getElement("importTableButton");
-  var clearButton = getElement("clearButton");
-  var exportButton = getElement("exportButton");
+  var resetButton = getElement("resetButton");
+  var exportPdfButton = getElement("exportPdfButton");
+  var exportDocxButton = getElement("exportDocxButton");
   var closeButton = getElement("closeButton");
   var filenameInput = getElement("filenameInput");
-  var formatSelect = getElement("formatSelect");
   var columnsInput = getElement("columnsInput");
-  var selectionSummary = getElement("selectionSummary");
-  var draftSummary = getElement("draftSummary");
-  var previewContainer = getElement("previewContainer");
   var statusMessage = getElement("statusMessage");
   var currentState = null;
-  captureScreenButton.addEventListener("click", () => {
-    setStatus("Validando y capturando pantalla...");
-    postMessageToPlugin({ type: "capture-screen" });
-  });
-  captureTableButton.addEventListener("click", () => {
-    setStatus("Validando tabla de traducciones...");
-    postMessageToPlugin({ type: "capture-table" });
+  blocksContainer.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const captureScreenBlockId = target.dataset.captureScreen;
+    const captureTableBlockId = target.dataset.captureTable;
+    const removeBlockId = target.dataset.removeBlock;
+    if (captureScreenBlockId) {
+      setStatus("Validando y capturando pantalla...");
+      postMessageToPlugin({
+        type: "capture-screen",
+        payload: { blockId: captureScreenBlockId }
+      });
+      return;
+    }
+    if (captureTableBlockId) {
+      setStatus("Validando tabla de traducciones...");
+      postMessageToPlugin({
+        type: "capture-table",
+        payload: { blockId: captureTableBlockId }
+      });
+      return;
+    }
+    if (removeBlockId) {
+      postMessageToPlugin({ type: "remove-block", payload: { blockId: removeBlockId } });
+      return;
+    }
+    if (target.dataset.addBlock) {
+      postMessageToPlugin({ type: "add-block" });
+    }
   });
   importTableButton.addEventListener("click", () => {
     postMessageToPlugin({
@@ -53847,47 +53924,17 @@
       payload: { columns: getTemplateColumns() }
     });
   });
-  clearButton.addEventListener("click", () => {
-    postMessageToPlugin({ type: "clear-pairs" });
+  resetButton.addEventListener("click", () => {
+    postMessageToPlugin({ type: "reset" });
   });
   closeButton.addEventListener("click", () => {
     postMessageToPlugin({ type: "close-plugin" });
   });
-  exportButton.addEventListener("click", async () => {
-    if (!currentState || currentState.document.pairs.length === 0) {
-      setStatus("Campos obligatorios: captura al menos una pantalla y una tabla.", true);
-      return;
-    }
-    const exportDocument = __spreadProps(__spreadValues({}, currentState.document), {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    });
-    exportButton.disabled = true;
-    setStatus("Preparando descarga...");
-    try {
-      if (formatSelect.value === "docx") {
-        await exportDocx(exportDocument);
-      } else {
-        exportPdf(exportDocument);
-      }
-      setStatus("Archivo listo. Si tu navegador lo solicita, confirma la descarga.");
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "No se pudo exportar el documento.",
-        true
-      );
-    } finally {
-      exportButton.disabled = false;
-    }
+  exportPdfButton.addEventListener("click", () => {
+    exportCurrentDocument("pdf");
   });
-  previewContainer.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    const pairId = target.dataset.removePair;
-    if (pairId) {
-      postMessageToPlugin({ type: "remove-pair", payload: { id: pairId } });
-    }
+  exportDocxButton.addEventListener("click", () => {
+    void exportCurrentDocument("docx");
   });
   window.onmessage = (event) => {
     const message = event.data.pluginMessage;
@@ -53908,75 +53955,108 @@
     }
   };
   postMessageToPlugin({ type: "state-request" });
-  renderEmptyPreview();
   function renderState(state2) {
-    selectionSummary.innerHTML = renderSelection(state2);
-    draftSummary.innerHTML = renderDraft(state2);
-    exportButton.disabled = state2.document.pairs.length === 0;
-    clearButton.disabled = state2.document.pairs.length === 0 && !state2.draft.screen && !state2.draft.table;
-    if (state2.document.pairs.length === 0) {
-      renderEmptyPreview();
-    } else {
-      renderPreview(state2.document);
+    renderSelection(state2);
+    renderSidebarSummary(state2);
+    renderBlocks(state2);
+    const canExport = state2.document.pairs.length > 0;
+    exportPdfButton.disabled = !canExport;
+    exportDocxButton.disabled = !canExport;
+    resetButton.disabled = state2.blocks.length === 1 && !state2.blocks[0].screen && !state2.blocks[0].table;
+    if (canExport) {
       setDefaultFilename(state2.document);
     }
   }
   function renderSelection(state2) {
     if (state2.selection.count === 0) {
-      return `
+      selectionSummary.innerHTML = `
       <strong>Nada seleccionado</strong>
-      <span>Selecciona una pantalla o una tabla en Figma y pulsa el boton correspondiente.</span>
+      <span>Selecciona una pantalla o tabla en Figma y usa el bloque correspondiente.</span>
     `;
+      return;
     }
-    return `
+    selectionSummary.innerHTML = `
     <strong>${state2.selection.count} elemento${state2.selection.count === 1 ? "" : "s"} seleccionado${state2.selection.count === 1 ? "" : "s"}</strong>
     <span>${state2.selection.names.map(escapeHtml).join(", ")}</span>
   `;
   }
-  function renderDraft(state2) {
-    const screen = state2.draft.screen;
-    const table = state2.draft.table;
-    return `
-    <div class="draft-row ${screen ? "complete" : ""}">
-      <span>Pantalla</span>
-      <strong>${screen ? escapeHtml(screen.name) : "Obligatoria"}</strong>
+  function renderSidebarSummary(state2) {
+    const completedPairs = state2.document.pairs;
+    const pendingBlocks = state2.blocks.filter((block) => !block.screen || !block.table);
+    const columns = getExportColumns(completedPairs);
+    screenCountSummary.innerHTML = `
+    <strong>${completedPairs.length}</strong>
+    <span>pantalla${completedPairs.length === 1 ? "" : "s"} en previsualizacion</span>
+  `;
+    columnsSummary.innerHTML = columns.length > 0 ? columns.map((column) => `<span class="chip">${escapeHtml(column)}</span>`).join("") : `<span class="muted">Captura una tabla para ver columnas.</span>`;
+    exportSummary.innerHTML = `
+    <div class="summary-row">
+      <span>Bloques totales</span>
+      <strong>${state2.blocks.length}</strong>
     </div>
-    <div class="draft-row ${table ? "complete" : ""}">
-      <span>Tabla</span>
-      <strong>${table ? escapeHtml(table.name) : "Obligatoria"}</strong>
+    <div class="summary-row">
+      <span>Listos para exportar</span>
+      <strong>${completedPairs.length}</strong>
     </div>
-    <p>Cuando ambos campos estan capturados, se anade una entrada al documento.</p>
+    <div class="summary-row">
+      <span>Pendientes</span>
+      <strong>${pendingBlocks.length}</strong>
+    </div>
   `;
   }
-  function renderPreview(document2) {
-    previewContainer.innerHTML = `
-    <section class="document-preview">
-      <header class="document-header">
-        <p class="eyebrow">Previsualizacion</p>
-        <h2>Documento de traducciones</h2>
-        <p>${document2.pairs.length} pantalla${document2.pairs.length === 1 ? "" : "s"} preparada${document2.pairs.length === 1 ? "" : "s"} para exportar.</p>
-      </header>
-      ${document2.pairs.map(renderPairPreview).join("")}
-    </section>
-  `;
-  }
-  function renderPairPreview(pair, index2) {
-    return `
-    <article class="pair-preview">
-      <div class="pair-heading">
-        <div>
-          <p class="eyebrow">Pantalla ${index2 + 1}</p>
-          <h3>${escapeHtml(pair.screen.name)}</h3>
-        </div>
-        <button class="button small" type="button" data-remove-pair="${pair.id}">
-          Eliminar
-        </button>
+  function renderBlocks(state2) {
+    const lastBlock = state2.blocks[state2.blocks.length - 1];
+    const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
+    blocksContainer.innerHTML = `
+    <section class="blocks-header">
+      <div>
+        <p class="eyebrow">Pantalla principal</p>
+        <h2>Bloques de pantalla + tabla</h2>
+        <p>Captura cada pantalla con su tabla de traducciones. El documento se monta con los bloques completos.</p>
       </div>
-      <div class="pair-content">
-        <img class="screen-image" src="${pair.screen.dataUrl}" alt="${escapeHtml(
-      pair.screen.name
-    )}" />
-        ${renderTranslationTable(pair.table)}
+    </section>
+    ${state2.blocks.map((block, index2) => renderBlock(block, index2, state2.blocks.length)).join("")}
+    ${canAddAnother ? `<button class="button secondary add-block" type="button" data-add-block="true">
+            Anadir otra pantalla
+          </button>` : ""}
+  `;
+  }
+  function renderBlock(block, index2, totalBlocks) {
+    const isComplete = Boolean(block.screen && block.table);
+    return `
+    <article class="translation-block ${isComplete ? "complete" : ""}">
+      <div class="block-heading">
+        <div>
+          <p class="eyebrow">Bloque ${index2 + 1}</p>
+          <h3>${block.screen ? escapeHtml(block.screen.name) : "Nueva pantalla"}</h3>
+        </div>
+        ${totalBlocks > 1 ? `<button class="button small" type="button" data-remove-block="${block.id}">
+                Eliminar bloque
+              </button>` : ""}
+      </div>
+      <div class="block-grid">
+        <section class="block-panel">
+          <div class="step-title">
+            <span class="${block.screen ? "dot ok" : "dot"}"></span>
+            <strong>Pantalla</strong>
+          </div>
+          ${block.screen ? `<img class="screen-image" src="${block.screen.dataUrl}" alt="${escapeHtml(
+      block.screen.name
+    )}" />` : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame y capturala aqui.</p>`}
+          <button class="button primary" type="button" data-capture-screen="${block.id}">
+            ${block.screen ? "Reemplazar pantalla" : "Capturar pantalla seleccionada"}
+          </button>
+        </section>
+        <section class="block-panel">
+          <div class="step-title">
+            <span class="${block.table ? "dot ok" : "dot"}"></span>
+            <strong>Tabla de traducciones</strong>
+          </div>
+          ${block.table ? renderTranslationTable(block.table) : `<p class="empty-note">Selecciona la tabla editable en Figma y capturala aqui.</p>`}
+          <button class="button primary" type="button" data-capture-table="${block.id}">
+            ${block.table ? "Reemplazar tabla" : "Capturar tabla seleccionada"}
+          </button>
+        </section>
       </div>
     </article>
   `;
@@ -54000,19 +54080,38 @@
     </div>
   `;
   }
-  function renderEmptyPreview() {
-    previewContainer.innerHTML = `
-    <div class="empty-preview">
-      <h2>Plugin de traducciones UI</h2>
-      <p>Captura una pantalla y una tabla de traducciones para crear el documento.</p>
-      <ol>
-        <li>Selecciona la pantalla PNG o frame y pulsa <strong>Capturar pantalla</strong>.</li>
-        <li>Selecciona la tabla editable de traducciones y pulsa <strong>Capturar tabla</strong>.</li>
-        <li>Si no tienes tabla, pulsa <strong>Importar tabla plantilla</strong>, editala en Figma y capturala.</li>
-        <li>Repite el proceso para tantas pantallas como necesites.</li>
-      </ol>
-    </div>
-  `;
+  function exportCurrentDocument(format) {
+    if (!currentState || currentState.document.pairs.length === 0) {
+      setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
+      return;
+    }
+    const exportDocument = __spreadProps(__spreadValues({}, currentState.document), {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    setExportButtonsDisabled(true);
+    setStatus("Preparando descarga...");
+    try {
+      if (format === "pdf") {
+        exportPdf(exportDocument);
+        setStatus("PDF listo. Si tu navegador lo solicita, confirma la descarga.");
+      } else {
+        exportDocx(exportDocument).then(() => {
+          setStatus("Word listo. Si tu navegador lo solicita, confirma la descarga.");
+        }).catch((error) => {
+          setStatus(
+            error instanceof Error ? error.message : "No se pudo exportar el documento.",
+            true
+          );
+        }).finally(() => setExportButtonsDisabled(false));
+        return;
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "No se pudo exportar el documento.",
+        true
+      );
+    }
+    setExportButtonsDisabled(false);
   }
   function exportPdf(document2) {
     const pdf = new E({ format: "a4", orientation: "landscape", unit: "pt" });
@@ -54165,6 +54264,17 @@
       )
     });
   }
+  function getExportColumns(pairs) {
+    const columns = /* @__PURE__ */ new Set();
+    pairs.forEach((pair) => {
+      pair.table.headers.forEach((header) => {
+        if (header.trim()) {
+          columns.add(header.trim());
+        }
+      });
+    });
+    return [...columns];
+  }
   function fitWithin(width, height, maxWidth, maxHeight) {
     const scale = Math.min(maxWidth / width, maxHeight / height, 1);
     return {
@@ -54210,6 +54320,10 @@
   }
   function formatDate(isoDate) {
     return new Date(isoDate).toLocaleString();
+  }
+  function setExportButtonsDisabled(disabled) {
+    exportPdfButton.disabled = disabled;
+    exportDocxButton.disabled = disabled;
   }
   function setStatus(message, isError = false) {
     statusMessage.textContent = message;

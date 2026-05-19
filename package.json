@@ -1,7 +1,7 @@
 {
-  "name": "figma-to-word",
+  "name": "ui-translation-exporter",
   "version": "1.0.0",
-  "description": "Figma plugin to export selected frames as copyable PDF or Word documents.",
+  "description": "Figma plugin to export UI screens with translation tables to PDF or Word.",
   "private": true,
   "main": "dist/code.js",
   "scripts": {

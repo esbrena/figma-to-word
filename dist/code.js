@@ -1,5 +1,22 @@
 "use strict";
 (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __propIsEnum = Object.prototype.propertyIsEnumerable;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __spreadValues = (a, b) => {
+    for (var prop in b || (b = {}))
+      if (__hasOwnProp.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    if (__getOwnPropSymbols)
+      for (var prop of __getOwnPropSymbols(b)) {
+        if (__propIsEnum.call(b, prop))
+          __defNormalProp(a, prop, b[prop]);
+      }
+    return a;
+  };
+
   // src/code.ts
   var TEMPLATE_COLUMNS = ["Neutro", "Voseado", "Portugues", "Ingles", "Frances"];
   var TEMPLATE_ROWS = [
@@ -19,37 +36,38 @@
     ]
   ];
   var REGULAR_FONT = { family: "Inter", style: "Regular" };
-  var draftScreen;
-  var draftTable;
-  var pairs = [];
+  var nextBlockNumber = 1;
+  var initialBlockId = createBlockId();
+  var activeBlockId = initialBlockId;
+  var blocks = [{ id: initialBlockId }];
   figma.showUI(__html__, { width: 1040, height: 780, themeColors: true });
   figma.ui.onmessage = async (message) => {
     if (message.type === "state-request") {
       postState();
       return;
     }
+    if (message.type === "add-block") {
+      addBlock();
+      return;
+    }
     if (message.type === "capture-screen") {
-      await captureScreen();
+      await captureScreen(message.payload.blockId);
       return;
     }
     if (message.type === "capture-table") {
-      captureTable();
+      captureTable(message.payload.blockId);
       return;
     }
     if (message.type === "import-template-table") {
       await importTemplateTable(message.payload.columns);
       return;
     }
-    if (message.type === "remove-pair") {
-      pairs = pairs.filter((pair) => pair.id !== message.payload.id);
-      postState();
+    if (message.type === "remove-block") {
+      removeBlock(message.payload.blockId);
       return;
     }
-    if (message.type === "clear-pairs") {
-      draftScreen = void 0;
-      draftTable = void 0;
-      pairs = [];
-      postState();
+    if (message.type === "reset") {
+      resetBlocks();
       return;
     }
     if (message.type === "close-plugin") {
@@ -62,15 +80,14 @@
     figma.ui.postMessage(message);
   }
   function postState() {
+    const completedPairs = getCompletedPairs();
     const state = {
       selection: getSelectionSummary(),
-      draft: {
-        screen: draftScreen,
-        table: draftTable
-      },
+      activeBlockId,
+      blocks,
       document: {
         generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        pairs
+        pairs: completedPairs
       }
     };
     postToUi({ type: "state", payload: state });
@@ -85,7 +102,56 @@
       names: selection.map((node) => node.name)
     };
   }
-  async function captureScreen() {
+  function addBlock() {
+    const block = { id: createBlockId() };
+    blocks = [...blocks, block];
+    activeBlockId = block.id;
+    postState();
+  }
+  function removeBlock(blockId) {
+    if (blocks.length <= 1) {
+      postNotice("Debe existir al menos un bloque de pantalla y tabla.", "error");
+      return;
+    }
+    blocks = blocks.filter((block) => block.id !== blockId);
+    activeBlockId = blocks[blocks.length - 1].id;
+    postState();
+  }
+  function resetBlocks() {
+    const block = { id: createBlockId() };
+    blocks = [block];
+    activeBlockId = block.id;
+    postNotice("Documento reiniciado.", "info");
+    postState();
+  }
+  function createBlockId() {
+    const id = `block-${nextBlockNumber}`;
+    nextBlockNumber += 1;
+    return id;
+  }
+  function getBlock(blockId) {
+    return blocks.find((block) => block.id === blockId);
+  }
+  function updateBlock(blockId, patch) {
+    blocks = blocks.map(
+      (block) => block.id === blockId ? __spreadValues(__spreadValues({}, block), patch) : block
+    );
+    activeBlockId = blockId;
+  }
+  function getCompletedPairs() {
+    return blocks.filter(
+      (block) => Boolean(block.screen) && Boolean(block.table)
+    ).map((block) => ({
+      id: block.id,
+      screen: block.screen,
+      table: block.table
+    }));
+  }
+  async function captureScreen(blockId) {
+    if (!getBlock(blockId)) {
+      postNotice("No se encontro el bloque de pantalla seleccionado.", "error");
+      return;
+    }
     const selectedNode = getSingleSelection();
     if (!selectedNode) {
       postNotice("Campo obligatorio: selecciona una pantalla PNG o frame en Figma.", "error");
@@ -101,21 +167,26 @@
     }
     postToUi({ type: "busy", payload: { message: "Capturando pantalla seleccionada..." } });
     try {
-      draftScreen = {
-        id: selectedNode.id,
-        name: selectedNode.name,
-        width: Math.round(bounds.width),
-        height: Math.round(bounds.height),
-        dataUrl: await exportNodeAsJpg(selectedNode, getScaleForNode(selectedNode, 1800))
-      };
-      completePairIfReady();
-      postNotice("Pantalla capturada. Ahora selecciona la tabla de traducciones.", "info");
+      updateBlock(blockId, {
+        screen: {
+          id: selectedNode.id,
+          name: selectedNode.name,
+          width: Math.round(bounds.width),
+          height: Math.round(bounds.height),
+          dataUrl: await exportNodeAsJpg(selectedNode, getScaleForNode(selectedNode, 1800))
+        }
+      });
+      postNotice("Pantalla capturada en el bloque. Ahora captura su tabla.", "info");
       postState();
     } catch (e) {
       postNotice("No se pudo exportar la pantalla seleccionada.", "error");
     }
   }
-  function captureTable() {
+  function captureTable(blockId) {
+    if (!getBlock(blockId)) {
+      postNotice("No se encontro el bloque de pantalla seleccionado.", "error");
+      return;
+    }
     const selectedNode = getSingleSelection();
     if (!selectedNode) {
       postNotice("Campo obligatorio: selecciona una tabla de traducciones.", "error");
@@ -129,25 +200,9 @@
       );
       return;
     }
-    draftTable = table;
-    completePairIfReady();
-    postNotice("Tabla de traducciones capturada.", "info");
+    updateBlock(blockId, { table });
+    postNotice("Tabla de traducciones capturada en el bloque.", "info");
     postState();
-  }
-  function completePairIfReady() {
-    if (!draftScreen || !draftTable) {
-      return;
-    }
-    pairs = [
-      ...pairs,
-      {
-        id: `${Date.now()}-${pairs.length + 1}`,
-        screen: draftScreen,
-        table: draftTable
-      }
-    ];
-    draftScreen = void 0;
-    draftTable = void 0;
   }
   async function importTemplateTable(columns) {
     const cleanColumns = columns.map((column) => column.trim()).filter((column) => column.length > 0);
@@ -239,13 +294,12 @@
     if (rows.length < 2) {
       return null;
     }
-    const columnCount = Math.max(...rows.map((row) => row.length));
-    if (columnCount < 2 || rows[0].length < 2) {
+    const columnCount = inferColumnCount(rows);
+    if (columnCount < 2) {
       return null;
     }
-    const normalizedRows = rows.map(
-      (row) => Array.from({ length: columnCount }, (_, index) => row[index] || "")
-    );
+    const anchors = inferColumnAnchors(rows, columnCount);
+    const normalizedRows = rows.map((row) => normalizeRowToColumns(row, anchors));
     const headers = normalizedRows[0];
     const bodyRows = normalizedRows.slice(1);
     if (bodyRows.length === 0 || headers.every((header) => !header.trim())) {
@@ -259,7 +313,7 @@
     };
   }
   function collectTextBlocks(node) {
-    const blocks = [];
+    const blocks2 = [];
     walkVisibleNodes(node, (child) => {
       if (child.type !== "TEXT") {
         return;
@@ -269,18 +323,19 @@
       if (!text || !bounds) {
         return;
       }
-      blocks.push({
+      blocks2.push({
         text,
         x: bounds.x,
         y: bounds.y,
+        width: bounds.width,
         height: bounds.height
       });
     });
-    return blocks.sort((a, b) => a.y - b.y || a.x - b.x);
+    return blocks2.sort((a, b) => a.y - b.y || a.x - b.x);
   }
-  function groupTextBlocksIntoRows(blocks) {
+  function groupTextBlocksIntoRows(blocks2) {
     const rows = [];
-    for (const block of blocks) {
+    for (const block of blocks2) {
       const tolerance = Math.max(14, block.height * 0.65);
       const row = rows.find((candidate) => Math.abs(candidate[0].y - block.y) <= tolerance);
       if (row) {
@@ -289,7 +344,55 @@
         rows.push([block]);
       }
     }
-    return rows.map((row) => row.sort((a, b) => a.x - b.x).map((block) => block.text)).filter((row) => row.some((cell) => cell.trim().length > 0));
+    return rows.map((row) => row.sort((a, b) => a.x - b.x)).filter((row) => row.some((cell) => cell.text.trim().length > 0));
+  }
+  function inferColumnCount(rows) {
+    const bodyLengths = rows.slice(1).map((row) => row.length).filter((length) => length >= 2);
+    if (bodyLengths.length === 0) {
+      return Math.max(...rows.map((row) => row.length));
+    }
+    const counts = /* @__PURE__ */ new Map();
+    bodyLengths.forEach((length) => {
+      counts.set(length, (counts.get(length) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+  }
+  function inferColumnAnchors(rows, columnCount) {
+    const anchorRow = rows.slice(1).find((row) => row.length === columnCount) || rows.find((row) => row.length === columnCount);
+    if (anchorRow) {
+      return anchorRow.map((block) => getBlockCenterX(block));
+    }
+    const allBlocks = rows.flat();
+    const minX = Math.min(...allBlocks.map((block) => block.x));
+    const maxX = Math.max(...allBlocks.map((block) => block.x + block.width));
+    const columnWidth = (maxX - minX) / columnCount;
+    return Array.from(
+      { length: columnCount },
+      (_, index) => minX + columnWidth * index + columnWidth / 2
+    );
+  }
+  function normalizeRowToColumns(row, anchors) {
+    const cells = anchors.map(() => []);
+    row.forEach((block) => {
+      const index = getClosestAnchorIndex(getBlockCenterX(block), anchors);
+      cells[index].push(block.text);
+    });
+    return cells.map((parts) => parts.join(" ").replace(/\s+/g, " ").trim());
+  }
+  function getClosestAnchorIndex(x, anchors) {
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    anchors.forEach((anchor, index) => {
+      const distance = Math.abs(anchor - x);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+    return closestIndex;
+  }
+  function getBlockCenterX(block) {
+    return block.x + block.width / 2;
   }
   function walkVisibleNodes(node, visit) {
     if ("visible" in node && node.visible === false) {
