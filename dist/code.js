@@ -38,10 +38,9 @@
   var REGULAR_FONT = { family: "Inter", style: "Regular" };
   var nextBlockNumber = 1;
   var initialBlockId = createBlockId();
-  var activeBlockId = initialBlockId;
   var blocks = [{ id: initialBlockId, name: "Bloque 1" }];
   figma.showUI(__html__, {
-    width: 960,
+    width: 800,
     height: 620,
     themeColors: true,
     title: "UI Translation Exporter"
@@ -72,7 +71,7 @@
       return;
     }
     if (message.type === "import-template-table") {
-      await importTemplateTable(message.payload.columns);
+      await importTemplateTable();
       return;
     }
     if (message.type === "remove-block") {
@@ -83,16 +82,12 @@
       resetBlocks();
       return;
     }
-    if (message.type === "close-plugin") {
-      figma.closePlugin();
-    }
   };
-  figma.on("selectionchange", postState);
   postState();
   function applyInitialUiLayout(availWidth, availHeight) {
     const safeWidth = Number.isFinite(availWidth) && availWidth > 0 ? availWidth : 1440;
     const safeHeight = Number.isFinite(availHeight) && availHeight > 0 ? availHeight : 900;
-    const width = Math.round(Math.min(960, safeWidth));
+    const width = Math.round(Math.min(800, Math.floor(safeWidth * 0.5)));
     const height = Math.round(Math.max(420, safeHeight));
     const x = Math.max(0, safeWidth - width);
     const y = 0;
@@ -105,8 +100,6 @@
   function postState() {
     const completedPairs = getCompletedPairs();
     const state = {
-      selection: getSelectionSummary(),
-      activeBlockId,
       blocks,
       document: {
         generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -118,18 +111,10 @@
   function postNotice(message, level = "info") {
     postToUi({ type: "notice", payload: { message, level } });
   }
-  function getSelectionSummary() {
-    const selection = figma.currentPage.selection;
-    return {
-      count: selection.length,
-      names: selection.map((node) => node.name)
-    };
-  }
   function addBlock() {
     const blockNumber = nextBlockNumber;
     const block = { id: createBlockId(), name: `Bloque ${blockNumber}` };
     blocks = [...blocks, block];
-    activeBlockId = block.id;
     postState();
   }
   function removeBlock(blockId) {
@@ -138,14 +123,12 @@
       return;
     }
     blocks = blocks.filter((block) => block.id !== blockId);
-    activeBlockId = blocks[blocks.length - 1].id;
     postState();
   }
   function resetBlocks() {
     const blockNumber = nextBlockNumber;
     const block = { id: createBlockId(), name: `Bloque ${blockNumber}` };
     blocks = [block];
-    activeBlockId = block.id;
     postNotice("Documento reiniciado.", "info");
     postState();
   }
@@ -161,7 +144,6 @@
     blocks = blocks.map(
       (block) => block.id === blockId ? __spreadValues(__spreadValues({}, block), patch) : block
     );
-    activeBlockId = blockId;
   }
   function updateBlockName(blockId, name) {
     const safeName = name.trim().slice(0, 80);
@@ -237,25 +219,28 @@
     postNotice("Tabla de traducciones capturada en el bloque.", "info");
     postState();
   }
-  async function importTemplateTable(columns) {
-    const cleanColumns = columns.map((column) => column.trim()).filter((column) => column.length > 0);
-    const headers = cleanColumns.length > 0 ? cleanColumns : TEMPLATE_COLUMNS;
+  async function importTemplateTable() {
+    const headers = TEMPLATE_COLUMNS;
     const rows = TEMPLATE_ROWS.map(
       (row) => headers.map((_, index) => row[index] || "Texto traducido")
     );
     await figma.loadFontAsync(REGULAR_FONT);
-    const tableFrame = figma.createFrame();
+    const tableFrame = figma.createComponent();
     tableFrame.name = "Tabla de traducciones";
-    tableFrame.fills = [];
+    tableFrame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
     tableFrame.clipsContent = false;
     tableFrame.layoutMode = "VERTICAL";
     tableFrame.primaryAxisSizingMode = "AUTO";
     tableFrame.counterAxisSizingMode = "FIXED";
     tableFrame.itemSpacing = 0;
     tableFrame.strokesIncludedInLayout = true;
+    tableFrame.paddingTop = 0;
+    tableFrame.paddingRight = 0;
+    tableFrame.paddingBottom = 0;
+    tableFrame.paddingLeft = 0;
     const minCellHeight = 48;
     const borderColor = { r: 0.72, g: 0.72, b: 0.72 };
-    const headerFill = { r: 0.43, g: 0.43, b: 0.43 };
+    const headerFill = { r: 0.435, g: 0.435, b: 0.435 };
     const width = 900;
     const columnWidth = width / headers.length;
     const templateHeight = minCellHeight * (rows.length + 1);
@@ -343,6 +328,7 @@
     text.fills = [{ type: "SOLID", color: options.textColor }];
     text.textAutoResize = "HEIGHT";
     text.layoutSizingHorizontal = "FILL";
+    text.layoutSizingVertical = "HUG";
     text.resize(Math.max(148, options.width - 32), 20);
     text.characters = options.text;
     cell.appendChild(text);
