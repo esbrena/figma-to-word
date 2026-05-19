@@ -24,7 +24,8 @@ export type TranslationPair = {
   table: TranslationTable;
 };
 
-export type DraftState = {
+export type TranslationBlock = {
+  id: string;
   screen?: CapturedScreen;
   table?: TranslationTable;
 };
@@ -36,17 +37,19 @@ export type ExportDocument = {
 
 export type PluginState = {
   selection: SelectionSummary;
-  draft: DraftState;
+  activeBlockId: string;
+  blocks: TranslationBlock[];
   document: ExportDocument;
 };
 
 export type UiToPluginMessage =
   | { type: "state-request" }
-  | { type: "capture-screen" }
-  | { type: "capture-table" }
+  | { type: "add-block" }
+  | { type: "capture-screen"; payload: { blockId: string } }
+  | { type: "capture-table"; payload: { blockId: string } }
   | { type: "import-template-table"; payload: { columns: string[] } }
-  | { type: "remove-pair"; payload: { id: string } }
-  | { type: "clear-pairs" }
+  | { type: "remove-block"; payload: { blockId: string } }
+  | { type: "reset" }
   | { type: "close-plugin" };
 
 export type PluginToUiMessage =

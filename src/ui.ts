@@ -17,35 +17,65 @@ import type {
   ExportDocument,
   PluginState,
   PluginToUiMessage,
+  TranslationBlock,
   TranslationPair,
   TranslationTable,
   UiToPluginMessage,
 } from "./types";
 
-const captureScreenButton = getElement<HTMLButtonElement>("captureScreenButton");
-const captureTableButton = getElement<HTMLButtonElement>("captureTableButton");
+const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
+const selectionSummary = getElement<HTMLDivElement>("selectionSummary");
+const screenCountSummary = getElement<HTMLDivElement>("screenCountSummary");
+const columnsSummary = getElement<HTMLDivElement>("columnsSummary");
+const exportSummary = getElement<HTMLDivElement>("exportSummary");
 const importTableButton = getElement<HTMLButtonElement>("importTableButton");
-const clearButton = getElement<HTMLButtonElement>("clearButton");
-const exportButton = getElement<HTMLButtonElement>("exportButton");
+const resetButton = getElement<HTMLButtonElement>("resetButton");
+const exportPdfButton = getElement<HTMLButtonElement>("exportPdfButton");
+const exportDocxButton = getElement<HTMLButtonElement>("exportDocxButton");
 const closeButton = getElement<HTMLButtonElement>("closeButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
-const formatSelect = getElement<HTMLSelectElement>("formatSelect");
 const columnsInput = getElement<HTMLTextAreaElement>("columnsInput");
-const selectionSummary = getElement<HTMLDivElement>("selectionSummary");
-const draftSummary = getElement<HTMLDivElement>("draftSummary");
-const previewContainer = getElement<HTMLDivElement>("previewContainer");
 const statusMessage = getElement<HTMLDivElement>("statusMessage");
 
 let currentState: PluginState | null = null;
 
-captureScreenButton.addEventListener("click", () => {
-  setStatus("Validando y capturando pantalla...");
-  postMessageToPlugin({ type: "capture-screen" });
-});
+blocksContainer.addEventListener("click", (event) => {
+  const target = event.target;
 
-captureTableButton.addEventListener("click", () => {
-  setStatus("Validando tabla de traducciones...");
-  postMessageToPlugin({ type: "capture-table" });
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const captureScreenBlockId = target.dataset.captureScreen;
+  const captureTableBlockId = target.dataset.captureTable;
+  const removeBlockId = target.dataset.removeBlock;
+
+  if (captureScreenBlockId) {
+    setStatus("Validando y capturando pantalla...");
+    postMessageToPlugin({
+      type: "capture-screen",
+      payload: { blockId: captureScreenBlockId },
+    });
+    return;
+  }
+
+  if (captureTableBlockId) {
+    setStatus("Validando tabla de traducciones...");
+    postMessageToPlugin({
+      type: "capture-table",
+      payload: { blockId: captureTableBlockId },
+    });
+    return;
+  }
+
+  if (removeBlockId) {
+    postMessageToPlugin({ type: "remove-block", payload: { blockId: removeBlockId } });
+    return;
+  }
+
+  if (target.dataset.addBlock) {
+    postMessageToPlugin({ type: "add-block" });
+  }
 });
 
 importTableButton.addEventListener("click", () => {
@@ -55,58 +85,20 @@ importTableButton.addEventListener("click", () => {
   });
 });
 
-clearButton.addEventListener("click", () => {
-  postMessageToPlugin({ type: "clear-pairs" });
+resetButton.addEventListener("click", () => {
+  postMessageToPlugin({ type: "reset" });
 });
 
 closeButton.addEventListener("click", () => {
   postMessageToPlugin({ type: "close-plugin" });
 });
 
-exportButton.addEventListener("click", async () => {
-  if (!currentState || currentState.document.pairs.length === 0) {
-    setStatus("Campos obligatorios: captura al menos una pantalla y una tabla.", true);
-    return;
-  }
-
-  const exportDocument: ExportDocument = {
-    ...currentState.document,
-    generatedAt: new Date().toISOString(),
-  };
-
-  exportButton.disabled = true;
-  setStatus("Preparando descarga...");
-
-  try {
-    if (formatSelect.value === "docx") {
-      await exportDocx(exportDocument);
-    } else {
-      exportPdf(exportDocument);
-    }
-
-    setStatus("Archivo listo. Si tu navegador lo solicita, confirma la descarga.");
-  } catch (error) {
-    setStatus(
-      error instanceof Error ? error.message : "No se pudo exportar el documento.",
-      true,
-    );
-  } finally {
-    exportButton.disabled = false;
-  }
+exportPdfButton.addEventListener("click", () => {
+  exportCurrentDocument("pdf");
 });
 
-previewContainer.addEventListener("click", (event) => {
-  const target = event.target;
-
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
-
-  const pairId = target.dataset.removePair;
-
-  if (pairId) {
-    postMessageToPlugin({ type: "remove-pair", payload: { id: pairId } });
-  }
+exportDocxButton.addEventListener("click", () => {
+  void exportCurrentDocument("docx");
 });
 
 window.onmessage = (event: MessageEvent) => {
@@ -133,32 +125,33 @@ window.onmessage = (event: MessageEvent) => {
 };
 
 postMessageToPlugin({ type: "state-request" });
-renderEmptyPreview();
 
 function renderState(state: PluginState) {
-  selectionSummary.innerHTML = renderSelection(state);
-  draftSummary.innerHTML = renderDraft(state);
-  exportButton.disabled = state.document.pairs.length === 0;
-  clearButton.disabled =
-    state.document.pairs.length === 0 && !state.draft.screen && !state.draft.table;
+  renderSelection(state);
+  renderSidebarSummary(state);
+  renderBlocks(state);
 
-  if (state.document.pairs.length === 0) {
-    renderEmptyPreview();
-  } else {
-    renderPreview(state.document);
+  const canExport = state.document.pairs.length > 0;
+  exportPdfButton.disabled = !canExport;
+  exportDocxButton.disabled = !canExport;
+  resetButton.disabled =
+    state.blocks.length === 1 && !state.blocks[0].screen && !state.blocks[0].table;
+
+  if (canExport) {
     setDefaultFilename(state.document);
   }
 }
 
 function renderSelection(state: PluginState) {
   if (state.selection.count === 0) {
-    return `
+    selectionSummary.innerHTML = `
       <strong>Nada seleccionado</strong>
-      <span>Selecciona una pantalla o una tabla en Figma y pulsa el boton correspondiente.</span>
+      <span>Selecciona una pantalla o tabla en Figma y usa el bloque correspondiente.</span>
     `;
+    return;
   }
 
-  return `
+  selectionSummary.innerHTML = `
     <strong>${state.selection.count} elemento${
       state.selection.count === 1 ? "" : "s"
     } seleccionado${state.selection.count === 1 ? "" : "s"}</strong>
@@ -166,55 +159,111 @@ function renderSelection(state: PluginState) {
   `;
 }
 
-function renderDraft(state: PluginState) {
-  const screen = state.draft.screen;
-  const table = state.draft.table;
+function renderSidebarSummary(state: PluginState) {
+  const completedPairs = state.document.pairs;
+  const pendingBlocks = state.blocks.filter((block) => !block.screen || !block.table);
+  const columns = getExportColumns(completedPairs);
 
-  return `
-    <div class="draft-row ${screen ? "complete" : ""}">
-      <span>Pantalla</span>
-      <strong>${screen ? escapeHtml(screen.name) : "Obligatoria"}</strong>
+  screenCountSummary.innerHTML = `
+    <strong>${completedPairs.length}</strong>
+    <span>pantalla${completedPairs.length === 1 ? "" : "s"} en previsualizacion</span>
+  `;
+
+  columnsSummary.innerHTML =
+    columns.length > 0
+      ? columns.map((column) => `<span class="chip">${escapeHtml(column)}</span>`).join("")
+      : `<span class="muted">Captura una tabla para ver columnas.</span>`;
+
+  exportSummary.innerHTML = `
+    <div class="summary-row">
+      <span>Bloques totales</span>
+      <strong>${state.blocks.length}</strong>
     </div>
-    <div class="draft-row ${table ? "complete" : ""}">
-      <span>Tabla</span>
-      <strong>${table ? escapeHtml(table.name) : "Obligatoria"}</strong>
+    <div class="summary-row">
+      <span>Listos para exportar</span>
+      <strong>${completedPairs.length}</strong>
     </div>
-    <p>Cuando ambos campos estan capturados, se anade una entrada al documento.</p>
+    <div class="summary-row">
+      <span>Pendientes</span>
+      <strong>${pendingBlocks.length}</strong>
+    </div>
   `;
 }
 
-function renderPreview(document: ExportDocument) {
-  previewContainer.innerHTML = `
-    <section class="document-preview">
-      <header class="document-header">
-        <p class="eyebrow">Previsualizacion</p>
-        <h2>Documento de traducciones</h2>
-        <p>${document.pairs.length} pantalla${
-          document.pairs.length === 1 ? "" : "s"
-        } preparada${document.pairs.length === 1 ? "" : "s"} para exportar.</p>
-      </header>
-      ${document.pairs.map(renderPairPreview).join("")}
-    </section>
-  `;
-}
+function renderBlocks(state: PluginState) {
+  const lastBlock = state.blocks[state.blocks.length - 1];
+  const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
 
-function renderPairPreview(pair: TranslationPair, index: number) {
-  return `
-    <article class="pair-preview">
-      <div class="pair-heading">
-        <div>
-          <p class="eyebrow">Pantalla ${index + 1}</p>
-          <h3>${escapeHtml(pair.screen.name)}</h3>
-        </div>
-        <button class="button small" type="button" data-remove-pair="${pair.id}">
-          Eliminar
-        </button>
+  blocksContainer.innerHTML = `
+    <section class="blocks-header">
+      <div>
+        <p class="eyebrow">Pantalla principal</p>
+        <h2>Bloques de pantalla + tabla</h2>
+        <p>Captura cada pantalla con su tabla de traducciones. El documento se monta con los bloques completos.</p>
       </div>
-      <div class="pair-content">
-        <img class="screen-image" src="${pair.screen.dataUrl}" alt="${escapeHtml(
-          pair.screen.name,
-        )}" />
-        ${renderTranslationTable(pair.table)}
+    </section>
+    ${state.blocks
+      .map((block, index) => renderBlock(block, index, state.blocks.length))
+      .join("")}
+    ${
+      canAddAnother
+        ? `<button class="button secondary add-block" type="button" data-add-block="true">
+            Anadir otra pantalla
+          </button>`
+        : ""
+    }
+  `;
+}
+
+function renderBlock(block: TranslationBlock, index: number, totalBlocks: number) {
+  const isComplete = Boolean(block.screen && block.table);
+
+  return `
+    <article class="translation-block ${isComplete ? "complete" : ""}">
+      <div class="block-heading">
+        <div>
+          <p class="eyebrow">Bloque ${index + 1}</p>
+          <h3>${block.screen ? escapeHtml(block.screen.name) : "Nueva pantalla"}</h3>
+        </div>
+        ${
+          totalBlocks > 1
+            ? `<button class="button small" type="button" data-remove-block="${block.id}">
+                Eliminar bloque
+              </button>`
+            : ""
+        }
+      </div>
+      <div class="block-grid">
+        <section class="block-panel">
+          <div class="step-title">
+            <span class="${block.screen ? "dot ok" : "dot"}"></span>
+            <strong>Pantalla</strong>
+          </div>
+          ${
+            block.screen
+              ? `<img class="screen-image" src="${block.screen.dataUrl}" alt="${escapeHtml(
+                  block.screen.name,
+                )}" />`
+              : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame y capturala aqui.</p>`
+          }
+          <button class="button primary" type="button" data-capture-screen="${block.id}">
+            ${block.screen ? "Reemplazar pantalla" : "Capturar pantalla seleccionada"}
+          </button>
+        </section>
+        <section class="block-panel">
+          <div class="step-title">
+            <span class="${block.table ? "dot ok" : "dot"}"></span>
+            <strong>Tabla de traducciones</strong>
+          </div>
+          ${
+            block.table
+              ? renderTranslationTable(block.table)
+              : `<p class="empty-note">Selecciona la tabla editable en Figma y capturala aqui.</p>`
+          }
+          <button class="button primary" type="button" data-capture-table="${block.id}">
+            ${block.table ? "Reemplazar tabla" : "Capturar tabla seleccionada"}
+          </button>
+        </section>
       </div>
     </article>
   `;
@@ -244,19 +293,46 @@ function renderTranslationTable(table: TranslationTable) {
   `;
 }
 
-function renderEmptyPreview() {
-  previewContainer.innerHTML = `
-    <div class="empty-preview">
-      <h2>Plugin de traducciones UI</h2>
-      <p>Captura una pantalla y una tabla de traducciones para crear el documento.</p>
-      <ol>
-        <li>Selecciona la pantalla PNG o frame y pulsa <strong>Capturar pantalla</strong>.</li>
-        <li>Selecciona la tabla editable de traducciones y pulsa <strong>Capturar tabla</strong>.</li>
-        <li>Si no tienes tabla, pulsa <strong>Importar tabla plantilla</strong>, editala en Figma y capturala.</li>
-        <li>Repite el proceso para tantas pantallas como necesites.</li>
-      </ol>
-    </div>
-  `;
+function exportCurrentDocument(format: "pdf" | "docx") {
+  if (!currentState || currentState.document.pairs.length === 0) {
+    setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
+    return;
+  }
+
+  const exportDocument: ExportDocument = {
+    ...currentState.document,
+    generatedAt: new Date().toISOString(),
+  };
+
+  setExportButtonsDisabled(true);
+  setStatus("Preparando descarga...");
+
+  try {
+    if (format === "pdf") {
+      exportPdf(exportDocument);
+      setStatus("PDF listo. Si tu navegador lo solicita, confirma la descarga.");
+    } else {
+      exportDocx(exportDocument)
+        .then(() => {
+          setStatus("Word listo. Si tu navegador lo solicita, confirma la descarga.");
+        })
+        .catch((error) => {
+          setStatus(
+            error instanceof Error ? error.message : "No se pudo exportar el documento.",
+            true,
+          );
+        })
+        .finally(() => setExportButtonsDisabled(false));
+      return;
+    }
+  } catch (error) {
+    setStatus(
+      error instanceof Error ? error.message : "No se pudo exportar el documento.",
+      true,
+    );
+  }
+
+  setExportButtonsDisabled(false);
 }
 
 function exportPdf(document: ExportDocument) {
@@ -440,6 +516,20 @@ function buildDocxTranslationTable(table: TranslationTable) {
   });
 }
 
+function getExportColumns(pairs: TranslationPair[]) {
+  const columns = new Set<string>();
+
+  pairs.forEach((pair) => {
+    pair.table.headers.forEach((header) => {
+      if (header.trim()) {
+        columns.add(header.trim());
+      }
+    });
+  });
+
+  return [...columns];
+}
+
 function fitWithin(width: number, height: number, maxWidth: number, maxHeight: number) {
   const scale = Math.min(maxWidth / width, maxHeight / height, 1);
 
@@ -505,6 +595,11 @@ function getTemplateColumns() {
 
 function formatDate(isoDate: string) {
   return new Date(isoDate).toLocaleString();
+}
+
+function setExportButtonsDisabled(disabled: boolean) {
+  exportPdfButton.disabled = disabled;
+  exportDocxButton.disabled = disabled;
 }
 
 function setStatus(message: string, isError = false) {

@@ -4,6 +4,7 @@ import type {
   PluginToUiMessage,
   SelectionSummary,
   TranslationPair,
+  TranslationBlock,
   TranslationTable,
   UiToPluginMessage,
 } from "./types";
@@ -27,9 +28,18 @@ const TEMPLATE_ROWS = [
 ];
 const REGULAR_FONT: FontName = { family: "Inter", style: "Regular" };
 
-let draftScreen: CapturedScreen | undefined;
-let draftTable: TranslationTable | undefined;
-let pairs: TranslationPair[] = [];
+type TableTextBlock = {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+let nextBlockNumber = 1;
+const initialBlockId = createBlockId();
+let activeBlockId = initialBlockId;
+let blocks: TranslationBlock[] = [{ id: initialBlockId }];
 
 figma.showUI(__html__, { width: 1040, height: 780, themeColors: true });
 
@@ -39,13 +49,18 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
     return;
   }
 
+  if (message.type === "add-block") {
+    addBlock();
+    return;
+  }
+
   if (message.type === "capture-screen") {
-    await captureScreen();
+    await captureScreen(message.payload.blockId);
     return;
   }
 
   if (message.type === "capture-table") {
-    captureTable();
+    captureTable(message.payload.blockId);
     return;
   }
 
@@ -54,17 +69,13 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
     return;
   }
 
-  if (message.type === "remove-pair") {
-    pairs = pairs.filter((pair) => pair.id !== message.payload.id);
-    postState();
+  if (message.type === "remove-block") {
+    removeBlock(message.payload.blockId);
     return;
   }
 
-  if (message.type === "clear-pairs") {
-    draftScreen = undefined;
-    draftTable = undefined;
-    pairs = [];
-    postState();
+  if (message.type === "reset") {
+    resetBlocks();
     return;
   }
 
@@ -81,15 +92,14 @@ function postToUi(message: PluginToUiMessage) {
 }
 
 function postState() {
+  const completedPairs = getCompletedPairs();
   const state: PluginState = {
     selection: getSelectionSummary(),
-    draft: {
-      screen: draftScreen,
-      table: draftTable,
-    },
+    activeBlockId,
+    blocks,
     document: {
       generatedAt: new Date().toISOString(),
-      pairs,
+      pairs: completedPairs,
     },
   };
 
@@ -109,7 +119,73 @@ function getSelectionSummary(): SelectionSummary {
   };
 }
 
-async function captureScreen() {
+function addBlock() {
+  const block = { id: createBlockId() };
+  blocks = [...blocks, block];
+  activeBlockId = block.id;
+  postState();
+}
+
+function removeBlock(blockId: string) {
+  if (blocks.length <= 1) {
+    postNotice("Debe existir al menos un bloque de pantalla y tabla.", "error");
+    return;
+  }
+
+  blocks = blocks.filter((block) => block.id !== blockId);
+  activeBlockId = blocks[blocks.length - 1].id;
+  postState();
+}
+
+function resetBlocks() {
+  const block = { id: createBlockId() };
+  blocks = [block];
+  activeBlockId = block.id;
+  postNotice("Documento reiniciado.", "info");
+  postState();
+}
+
+function createBlockId() {
+  const id = `block-${nextBlockNumber}`;
+  nextBlockNumber += 1;
+  return id;
+}
+
+function getBlock(blockId: string): TranslationBlock | undefined {
+  return blocks.find((block) => block.id === blockId);
+}
+
+function updateBlock(blockId: string, patch: Partial<TranslationBlock>) {
+  blocks = blocks.map((block) =>
+    block.id === blockId
+      ? {
+          ...block,
+          ...patch,
+        }
+      : block,
+  );
+  activeBlockId = blockId;
+}
+
+function getCompletedPairs(): TranslationPair[] {
+  return blocks
+    .filter(
+      (block): block is TranslationPair =>
+        Boolean(block.screen) && Boolean(block.table),
+    )
+    .map((block) => ({
+      id: block.id,
+      screen: block.screen,
+      table: block.table,
+    }));
+}
+
+async function captureScreen(blockId: string) {
+  if (!getBlock(blockId)) {
+    postNotice("No se encontro el bloque de pantalla seleccionado.", "error");
+    return;
+  }
+
   const selectedNode = getSingleSelection();
 
   if (!selectedNode) {
@@ -130,23 +206,29 @@ async function captureScreen() {
   postToUi({ type: "busy", payload: { message: "Capturando pantalla seleccionada..." } });
 
   try {
-    draftScreen = {
+    updateBlock(blockId, {
+      screen: {
       id: selectedNode.id,
       name: selectedNode.name,
       width: Math.round(bounds.width),
       height: Math.round(bounds.height),
       dataUrl: await exportNodeAsJpg(selectedNode, getScaleForNode(selectedNode, 1800)),
-    };
+      },
+    });
 
-    completePairIfReady();
-    postNotice("Pantalla capturada. Ahora selecciona la tabla de traducciones.", "info");
+    postNotice("Pantalla capturada en el bloque. Ahora captura su tabla.", "info");
     postState();
   } catch {
     postNotice("No se pudo exportar la pantalla seleccionada.", "error");
   }
 }
 
-function captureTable() {
+function captureTable(blockId: string) {
+  if (!getBlock(blockId)) {
+    postNotice("No se encontro el bloque de pantalla seleccionado.", "error");
+    return;
+  }
+
   const selectedNode = getSingleSelection();
 
   if (!selectedNode) {
@@ -164,27 +246,9 @@ function captureTable() {
     return;
   }
 
-  draftTable = table;
-  completePairIfReady();
-  postNotice("Tabla de traducciones capturada.", "info");
+  updateBlock(blockId, { table });
+  postNotice("Tabla de traducciones capturada en el bloque.", "info");
   postState();
-}
-
-function completePairIfReady() {
-  if (!draftScreen || !draftTable) {
-    return;
-  }
-
-  pairs = [
-    ...pairs,
-    {
-      id: `${Date.now()}-${pairs.length + 1}`,
-      screen: draftScreen,
-      table: draftTable,
-    },
-  ];
-  draftScreen = undefined;
-  draftTable = undefined;
 }
 
 async function importTemplateTable(columns: string[]) {
@@ -306,15 +370,14 @@ function extractTranslationTable(node: SceneNode): TranslationTable | null {
     return null;
   }
 
-  const columnCount = Math.max(...rows.map((row) => row.length));
+  const columnCount = inferColumnCount(rows);
 
-  if (columnCount < 2 || rows[0].length < 2) {
+  if (columnCount < 2) {
     return null;
   }
 
-  const normalizedRows = rows.map((row) =>
-    Array.from({ length: columnCount }, (_, index) => row[index] || ""),
-  );
+  const anchors = inferColumnAnchors(rows, columnCount);
+  const normalizedRows = rows.map((row) => normalizeRowToColumns(row, anchors));
   const headers = normalizedRows[0];
   const bodyRows = normalizedRows.slice(1);
 
@@ -331,7 +394,7 @@ function extractTranslationTable(node: SceneNode): TranslationTable | null {
 }
 
 function collectTextBlocks(node: SceneNode) {
-  const blocks: Array<{ text: string; x: number; y: number; height: number }> = [];
+  const blocks: TableTextBlock[] = [];
 
   walkVisibleNodes(node, (child) => {
     if (child.type !== "TEXT") {
@@ -349,6 +412,7 @@ function collectTextBlocks(node: SceneNode) {
       text,
       x: bounds.x,
       y: bounds.y,
+      width: bounds.width,
       height: bounds.height,
     });
   });
@@ -356,10 +420,8 @@ function collectTextBlocks(node: SceneNode) {
   return blocks.sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
-function groupTextBlocksIntoRows(
-  blocks: Array<{ text: string; x: number; y: number; height: number }>,
-): string[][] {
-  const rows: Array<Array<{ text: string; x: number; y: number; height: number }>> = [];
+function groupTextBlocksIntoRows(blocks: TableTextBlock[]): TableTextBlock[][] {
+  const rows: TableTextBlock[][] = [];
 
   for (const block of blocks) {
     const tolerance = Math.max(14, block.height * 0.65);
@@ -373,8 +435,78 @@ function groupTextBlocksIntoRows(
   }
 
   return rows
-    .map((row) => row.sort((a, b) => a.x - b.x).map((block) => block.text))
-    .filter((row) => row.some((cell) => cell.trim().length > 0));
+    .map((row) => row.sort((a, b) => a.x - b.x))
+    .filter((row) => row.some((cell) => cell.text.trim().length > 0));
+}
+
+function inferColumnCount(rows: TableTextBlock[][]): number {
+  const bodyLengths = rows
+    .slice(1)
+    .map((row) => row.length)
+    .filter((length) => length >= 2);
+
+  if (bodyLengths.length === 0) {
+    return Math.max(...rows.map((row) => row.length));
+  }
+
+  const counts = new Map<number, number>();
+
+  bodyLengths.forEach((length) => {
+    counts.set(length, (counts.get(length) || 0) + 1);
+  });
+
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+}
+
+function inferColumnAnchors(rows: TableTextBlock[][], columnCount: number): number[] {
+  const anchorRow =
+    rows.slice(1).find((row) => row.length === columnCount) ||
+    rows.find((row) => row.length === columnCount);
+
+  if (anchorRow) {
+    return anchorRow.map((block) => getBlockCenterX(block));
+  }
+
+  const allBlocks = rows.flat();
+  const minX = Math.min(...allBlocks.map((block) => block.x));
+  const maxX = Math.max(...allBlocks.map((block) => block.x + block.width));
+  const columnWidth = (maxX - minX) / columnCount;
+
+  return Array.from(
+    { length: columnCount },
+    (_, index) => minX + columnWidth * index + columnWidth / 2,
+  );
+}
+
+function normalizeRowToColumns(row: TableTextBlock[], anchors: number[]): string[] {
+  const cells = anchors.map(() => [] as string[]);
+
+  row.forEach((block) => {
+    const index = getClosestAnchorIndex(getBlockCenterX(block), anchors);
+    cells[index].push(block.text);
+  });
+
+  return cells.map((parts) => parts.join(" ").replace(/\s+/g, " ").trim());
+}
+
+function getClosestAnchorIndex(x: number, anchors: number[]): number {
+  let closestIndex = 0;
+  let closestDistance = Number.POSITIVE_INFINITY;
+
+  anchors.forEach((anchor, index) => {
+    const distance = Math.abs(anchor - x);
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = index;
+    }
+  });
+
+  return closestIndex;
+}
+
+function getBlockCenterX(block: TableTextBlock): number {
+  return block.x + block.width / 2;
 }
 
 function walkVisibleNodes(node: SceneNode, visit: (node: SceneNode) => void) {
