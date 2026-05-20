@@ -50,7 +50,6 @@ blocksContainer.addEventListener("click", (event) => {
   const removeBlockId = target.dataset.removeBlock;
 
   if (captureScreenBlockId) {
-    setStatus("Validando y capturando pantalla...");
     postMessageToPlugin({
       type: "capture-screen",
       payload: { blockId: captureScreenBlockId },
@@ -59,7 +58,6 @@ blocksContainer.addEventListener("click", (event) => {
   }
 
   if (captureTableBlockId) {
-    setStatus("Validando tabla de traducciones...");
     postMessageToPlugin({
       type: "capture-table",
       payload: { blockId: captureTableBlockId },
