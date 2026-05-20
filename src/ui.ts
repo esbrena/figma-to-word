@@ -28,7 +28,6 @@ import type {
 } from "./types";
 
 const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
-const exportSummary = getElement<HTMLDivElement>("exportSummary");
 const exportButton = getElement<HTMLButtonElement>("exportButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
 const toast = getElement<HTMLDivElement>("toast");
@@ -144,7 +143,6 @@ postMessageToPlugin({
 postMessageToPlugin({ type: "state-request" });
 
 function renderState(state: PluginState) {
-  renderSidebarSummary(state);
   renderBlocks(state);
 
   const canExport = state.document.pairs.length > 0;
@@ -158,27 +156,6 @@ function renderState(state: PluginState) {
   }
 }
 
-function renderSidebarSummary(state: PluginState) {
-  const completedPairs = state.document.pairs;
-
-  exportSummary.innerHTML = `
-    <strong>${completedPairs.length} bloque${completedPairs.length === 1 ? "" : "s"} listo${
-      completedPairs.length === 1 ? "" : "s"
-    }</strong>
-    <button id="resetButton" class="button summary-reset" type="button" ${
-      state.blocks.length === 1 && !state.blocks[0].screen && !state.blocks[0].table
-        ? "disabled"
-        : ""
-    }>
-      Limpiar bloques
-    </button>
-  `;
-
-  getElement<HTMLButtonElement>("resetButton").addEventListener("click", () => {
-    postMessageToPlugin({ type: "reset" });
-  });
-}
-
 function renderBlocks(state: PluginState) {
   const lastBlock = state.blocks[state.blocks.length - 1];
   const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
@@ -188,9 +165,6 @@ function renderBlocks(state: PluginState) {
       <h1>UI Translation Exporter</h1>
       <p>Exporta pantallas UI junto a sus tablas de traduccion.</p>
     </header>
-    <section class="blocks-header">
-      <h2>Construccion del documento</h2>
-    </section>
     ${state.blocks
       .map((block, index) => renderBlock(block, index, state.blocks.length))
       .join("")}
@@ -220,6 +194,7 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
             data-block-name="${block.id}"
             aria-label="Nombre del bloque ${index + 1}"
           />
+          <span class="edit-icon" aria-hidden="true"></span>
         </div>
         ${
           totalBlocks > 1
@@ -258,7 +233,7 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
             ${block.table ? "Reemplazar tabla" : "Cargar tabla seleccionada"}
           </button>
           <button class="link-button" type="button" data-import-template="true">
-            Importar plantilla
+            Insertar tabla de ejemplo
           </button>
         </section>
       </div>

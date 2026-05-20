@@ -57,9 +57,9 @@
         left: 0;
         z-index: 10;
         display: grid;
-        grid-template-columns: auto minmax(220px, 1fr) auto auto;
+        grid-template-columns: minmax(240px, 1fr) auto auto;
         align-items: center;
-        gap: 14px;
+        gap: 16px;
         margin: 0 16px 16px;
         padding: 18px 20px;
         border-top: 1px solid var(--border);
@@ -68,26 +68,6 @@
         background: rgba(255, 255, 255, 0.98);
         backdrop-filter: blur(18px);
         box-shadow: 0 -16px 42px rgba(17, 24, 39, 0.14);
-      }
-
-      .summary {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: var(--text-muted);
-        font-size: 12px;
-        line-height: 1.35;
-        white-space: nowrap;
-      }
-
-      .summary strong {
-        color: var(--text);
-        font-size: 12px;
-        font-weight: 800;
-      }
-
-      .summary-reset {
-        white-space: nowrap;
       }
 
       .field {
@@ -107,7 +87,7 @@
         width: 100%;
         border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 10px 11px;
+        padding: 10px 38px 10px 11px;
         background: var(--background);
         color: var(--text);
         outline: none;
@@ -125,6 +105,22 @@
       .field textarea {
         min-height: 68px;
         resize: vertical;
+      }
+
+      .file-field {
+        position: relative;
+      }
+
+      .file-field::after {
+        content: "";
+        position: absolute;
+        right: 13px;
+        bottom: 12px;
+        width: 15px;
+        height: 15px;
+        opacity: 0.45;
+        background: no-repeat center / contain
+          url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.92 2.23a1.1 1.1 0 0 1 1.56 0l1.29 1.29a1.1 1.1 0 0 1 0 1.56l-7.7 7.7-3.24.72.72-3.24 7.37-8.03Z' stroke='%239CA3AF' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='m9.9 3.25 2.85 2.85' stroke='%239CA3AF' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
       }
 
       .actions {
@@ -217,7 +213,7 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        min-width: 144px;
+        min-width: 150px;
         justify-content: center;
         border: 1px solid var(--border);
         border-radius: 10px;
@@ -243,21 +239,8 @@
 
       .format-option .pdf-icon,
       .format-option .word-icon {
-        display: inline-grid;
-        place-items: center;
-        min-width: 34px;
+        width: 39px;
         height: 26px;
-        border-radius: 8px;
-        color: #ffffff;
-        font-size: 12px;
-      }
-
-      .format-option .pdf-icon {
-        background: #ff6b73;
-      }
-
-      .format-option .word-icon {
-        background: #5aa7f0;
       }
 
       .link-button {
@@ -266,7 +249,8 @@
         padding: 2px 4px;
         cursor: pointer;
         background: transparent;
-        color: var(--brand);
+        color: #438eff;
+        font-size: 12px;
         font-weight: 700;
         text-decoration: underline;
         text-underline-offset: 3px;
@@ -310,6 +294,14 @@
         background: transparent;
         color: var(--danger);
         font-size: 18px;
+      }
+
+      #exportButton {
+        min-width: 170px;
+        border-color: #438eff;
+        background: #438eff;
+        color: #ffffff;
+        box-shadow: 0 10px 24px rgba(67, 142, 255, 0.24);
       }
 
       .main {
@@ -399,13 +391,23 @@
         width: min(320px, 100%);
         border: 1px solid transparent;
         border-radius: 10px;
-        padding: 7px 9px;
+        padding: 7px 30px 7px 9px;
         background: transparent;
         color: var(--text);
         font-size: 15px;
         font-weight: 800;
         letter-spacing: -0.02em;
         outline: none;
+      }
+
+      .edit-icon {
+        width: 15px;
+        height: 15px;
+        margin-left: -34px;
+        opacity: 0.45;
+        pointer-events: none;
+        background: no-repeat center / contain
+          url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.92 2.23a1.1 1.1 0 0 1 1.56 0l1.29 1.29a1.1 1.1 0 0 1 0 1.56l-7.7 7.7-3.24.72.72-3.24 7.37-8.03Z' stroke='%239CA3AF' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='m9.9 3.25 2.85 2.85' stroke='%239CA3AF' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
       }
 
       .block-name-input:hover,
@@ -542,9 +544,7 @@
       </section>
 
       <footer class="footer">
-        <div id="exportSummary" class="summary"></div>
-
-        <div class="field">
+        <div class="field file-field">
           <label for="filenameInput">Nombre del archivo</label>
           <input id="filenameInput" type="text" placeholder="traducciones-ui" />
         </div>
@@ -554,11 +554,25 @@
           <div class="format-selector" role="radiogroup" aria-label="Formato de exportacion">
             <label class="format-option">
               <input type="radio" name="exportFormat" value="docx" checked />
-              <span><span class="word-icon">W</span> Word</span>
+              <span>
+                <svg class="word-icon" viewBox="0 0 130 85" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M0 20C0 8.9543 8.9543 0 20 0H109.985C121.031 0 129.985 8.95431 129.985 20V65C129.985 76.0457 121.031 85 109.985 85H20C8.95431 85 0 76.0457 0 65V20Z" fill="#5DA9F4"/>
+                  <path d="M53.3469 58L45.023 28.9091H51.7418L56.5571 49.1222H56.7986L62.1111 28.9091H67.8639L73.1622 49.1648H73.4179L78.2332 28.9091H84.952L76.6281 58H70.6338L65.094 38.9801H64.8668L59.3412 58H53.3469Z" fill="white"/>
+                </svg>
+                Word
+              </span>
             </label>
             <label class="format-option">
               <input type="radio" name="exportFormat" value="pdf" />
-              <span><span class="pdf-icon">PDF</span> PDF</span>
+              <span>
+                <svg class="pdf-icon" viewBox="0 0 130 85" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M0 20C0 8.9543 8.9543 0 20 0H109.985C121.031 0 129.985 8.95431 129.985 20V65C129.985 76.0457 121.031 85 109.985 85H20C8.95431 85 0 76.0457 0 65V20Z" fill="#FF7878"/>
+                  <path d="M27.3116 58V28.9091H38.7889C40.9953 28.9091 42.875 29.3305 44.4281 30.1733C45.9811 31.0066 47.1648 32.1667 47.9792 33.6534C48.8031 35.1307 49.215 36.8352 49.215 38.767C49.215 40.6989 48.7983 42.4034 47.965 43.8807C47.1317 45.358 45.9243 46.5085 44.3428 47.3324C42.7709 48.1562 40.8675 48.5682 38.6326 48.5682H31.3173V43.6392H37.6383C38.822 43.6392 39.7974 43.4356 40.5644 43.0284C41.341 42.6117 41.9186 42.0388 42.2974 41.3097C42.6857 40.571 42.8798 39.7235 42.8798 38.767C42.8798 37.8011 42.6857 36.9583 42.2974 36.2386C41.9186 35.5095 41.341 34.946 40.5644 34.5483C39.7879 34.1411 38.8031 33.9375 37.6099 33.9375H33.4622V58H27.3116Z" fill="white"/>
+                  <path d="M63.5225 58H53.21V28.9091H63.6078C66.5339 28.9091 69.0528 29.4915 71.1646 30.6562C73.2763 31.8116 74.9004 33.4735 76.0367 35.642C77.1826 37.8106 77.7555 40.4053 77.7555 43.4261C77.7555 46.4564 77.1826 49.0606 76.0367 51.2386C74.9004 53.4167 73.2669 55.0881 71.1362 56.2528C69.015 57.4176 66.4771 58 63.5225 58ZM59.3606 52.7301H63.2669C65.085 52.7301 66.6144 52.4081 67.8549 51.7642C69.1049 51.1108 70.0424 50.1023 70.6674 48.7386C71.3019 47.3655 71.6191 45.5947 71.6191 43.4261C71.6191 41.2765 71.3019 39.5199 70.6674 38.1562C70.0424 36.7926 69.1097 35.7888 67.8691 35.1449C66.6286 34.5009 65.0992 34.179 63.2811 34.179H59.3606V52.7301Z" fill="white"/>
+                  <path d="M82.3116 58V28.9091H101.573V33.9801H88.4622V40.9119H100.295V45.983H88.4622V58H82.3116Z" fill="white"/>
+                </svg>
+                PDF
+              </span>
             </label>
           </div>
         </div>
