@@ -8,24 +8,28 @@ import type {
   UiToPluginMessage,
 } from "./types";
 
-const TEMPLATE_COLUMNS = ["Neutro", "Voseado", "Portugues", "Ingles", "Frances"];
+const TEMPLATE_COLUMNS = [
+  { title: "Neutro", flag: "🇪🇸" },
+  { title: "Voseado", flag: "🇦🇷" },
+  { title: "Portugués", flag: "🇧🇷" },
+  { title: "Inglés", flag: "🇬🇧" },
+];
 const TEMPLATE_ROWS = [
   [
     "¿Buscas pedidos anteriores?",
-    "¿Buscas pedidos anteriores?",
+    "¿Buscás pedidos anteriores?",
     "Buscando por pedidos anteriores?",
     "Looking for previous orders?",
-    "Vous cherchez des commandes precedentes?",
   ],
   [
     "Consultar historial completo",
     "Consultar historial completo",
-    "Consulte o historico completo",
+    "Consulte o histórico completo",
     "Check full history",
-    "Consulter l'historique complet",
   ],
 ];
 const REGULAR_FONT: FontName = { family: "Inter", style: "Regular" };
+const SEMIBOLD_FONT: FontName = { family: "Inter", style: "Semi Bold" };
 
 type TableTextBlock = {
   text: string;
@@ -271,134 +275,179 @@ function captureTable(blockId: string) {
 async function importTemplateTable() {
   const headers = TEMPLATE_COLUMNS;
   const rows = TEMPLATE_ROWS.map((row) =>
-    headers.map((_, index) => row[index] || "Texto traducido"),
+    headers.map((_, index) => row[index] || ""),
   );
 
   await figma.loadFontAsync(REGULAR_FONT);
+  await figma.loadFontAsync(SEMIBOLD_FONT);
 
-  const tableFrame = figma.createComponent();
-  tableFrame.name = "Tabla de traducciones";
+  const tableFrame = figma.createFrame();
+  tableFrame.name = "Word Translation Table";
   tableFrame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-  tableFrame.clipsContent = false;
+  tableFrame.clipsContent = true;
   tableFrame.layoutMode = "VERTICAL";
   tableFrame.primaryAxisSizingMode = "AUTO";
-  tableFrame.counterAxisSizingMode = "FIXED";
+  tableFrame.counterAxisSizingMode = "AUTO";
   tableFrame.itemSpacing = 0;
   tableFrame.strokesIncludedInLayout = true;
-  tableFrame.paddingTop = 0;
-  tableFrame.paddingRight = 0;
-  tableFrame.paddingBottom = 0;
-  tableFrame.paddingLeft = 0;
 
-  const minCellHeight = 48;
-  const borderColor: RGB = { r: 0.72, g: 0.72, b: 0.72 };
-  const headerFill: RGB = { r: 0.435, g: 0.435, b: 0.435 };
-  const width = 900;
-  const columnWidth = width / headers.length;
-  const templateHeight = minCellHeight * (rows.length + 1);
-
-  tableFrame.resize(width, templateHeight);
   tableFrame.cornerRadius = 12;
+  tableFrame.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.85, b: 0.85 } }];
+  tableFrame.strokeWeight = 1;
 
-  const headerRow = createTemplateRow("Header", width);
+  const tableWidth = 1200;
+  const minCellWidth = 180;
+  const padding = 16;
+  const headerRow = createTemplateRow({
+    name: "Header Row",
+    width: tableWidth,
+    minHeight: 72,
+    fill: { r: 0.45, g: 0.45, b: 0.45 },
+  });
   tableFrame.appendChild(headerRow);
-  headers.forEach((header) => {
-    createTemplateCell({
+  headers.forEach((column) => {
+    createTemplateHeaderCell({
       parent: headerRow,
-      text: header,
-      width: columnWidth,
-      height: minCellHeight,
-      fill: headerFill,
-      textColor: { r: 1, g: 1, b: 1 },
-      fontSize: 18,
+      title: column.title,
+      flag: column.flag,
+      minWidth: minCellWidth,
+      padding,
     });
   });
 
   rows.forEach((row, rowIndex) => {
-    const bodyRow = createTemplateRow(`Fila ${rowIndex + 1}`, width);
+    const bodyRow = createTemplateRow({
+      name: `Row ${rowIndex + 1}`,
+      width: tableWidth,
+      minHeight: 100,
+      fill: rowIndex % 2 === 0 ? { r: 1, g: 1, b: 1 } : { r: 0.976, g: 0.976, b: 0.976 },
+      topStrokeOnly: true,
+    });
     tableFrame.appendChild(bodyRow);
     row.forEach((cell) => {
       createTemplateCell({
         parent: bodyRow,
         text: cell,
-        width: columnWidth,
-        height: minCellHeight,
-        fill: { r: 1, g: 1, b: 1 },
-        textColor: { r: 0.12, g: 0.12, b: 0.14 },
-        fontSize: 16,
+        minWidth: minCellWidth,
+        padding,
       });
     });
   });
 
-  tableFrame.strokes = [{ type: "SOLID", color: borderColor }];
-  tableFrame.strokeWeight = 1;
-  tableFrame.x = figma.viewport.center.x - width / 2;
-  tableFrame.y = figma.viewport.center.y - templateHeight / 2;
   figma.currentPage.appendChild(tableFrame);
+  tableFrame.x = figma.viewport.center.x - tableFrame.width / 2;
+  tableFrame.y = figma.viewport.center.y - tableFrame.height / 2;
   figma.currentPage.selection = [tableFrame];
   figma.viewport.scrollAndZoomIntoView([tableFrame]);
+  tableFrame.setPluginData("word-template", "translation-table");
 
   postNotice("Tabla plantilla importada. Edita textos o columnas en Figma y capturala.", "info");
   postState();
 }
 
-function createTemplateRow(name: string, width: number): FrameNode {
+function createTemplateRow(options: {
+  name: string;
+  width: number;
+  minHeight: number;
+  fill: RGB;
+  topStrokeOnly?: boolean;
+}): FrameNode {
   const row = figma.createFrame();
-  row.name = name;
-  row.fills = [];
+  row.name = options.name;
+  row.fills = [{ type: "SOLID", color: options.fill }];
   row.clipsContent = false;
   row.layoutMode = "HORIZONTAL";
   row.primaryAxisSizingMode = "FIXED";
   row.counterAxisSizingMode = "AUTO";
-  row.layoutSizingHorizontal = "FILL";
-  row.layoutSizingVertical = "HUG";
+  row.layoutGrow = 1;
   row.itemSpacing = 0;
   row.strokesIncludedInLayout = true;
-  row.minHeight = 48;
-  row.resize(width, 48);
+  row.minHeight = options.minHeight;
+  row.resize(options.width, options.minHeight);
+
+  if (options.topStrokeOnly) {
+    row.strokes = [{ type: "SOLID", color: { r: 0.9, g: 0.9, b: 0.9 } }];
+    row.strokeTopWeight = 1;
+    row.strokeRightWeight = 0;
+    row.strokeBottomWeight = 0;
+    row.strokeLeftWeight = 0;
+  }
+
   return row;
+}
+
+function createTemplateHeaderCell(options: {
+  parent: FrameNode;
+  title: string;
+  flag: string;
+  minWidth: number;
+  padding: number;
+}) {
+  const cell = figma.createFrame();
+  cell.name = `${options.title} Header`;
+  cell.fills = [];
+  cell.clipsContent = false;
+  cell.layoutMode = "HORIZONTAL";
+  cell.layoutGrow = 1;
+  cell.primaryAxisSizingMode = "AUTO";
+  cell.counterAxisSizingMode = "AUTO";
+  cell.minWidth = options.minWidth;
+  cell.paddingLeft = options.padding;
+  cell.paddingRight = options.padding;
+  cell.paddingTop = options.padding;
+  cell.paddingBottom = options.padding;
+  cell.primaryAxisAlignItems = "SPACE_BETWEEN";
+  cell.counterAxisAlignItems = "CENTER";
+  cell.itemSpacing = 12;
+
+  const text = figma.createText();
+  text.name = "Header title";
+  text.fontName = SEMIBOLD_FONT;
+  text.characters = options.title;
+  text.fontSize = 18;
+  text.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+
+  const flag = figma.createText();
+  flag.name = "Flag";
+  flag.fontName = REGULAR_FONT;
+  flag.characters = options.flag;
+  flag.fontSize = 18;
+  flag.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+
+  cell.appendChild(text);
+  cell.appendChild(flag);
+  options.parent.appendChild(cell);
 }
 
 function createTemplateCell(options: {
   parent: FrameNode;
   text: string;
-  width: number;
-  height: number;
-  fill: RGB;
-  textColor: RGB;
-  fontSize: number;
+  minWidth: number;
+  padding: number;
 }) {
   const cell = figma.createFrame();
-  cell.name = "Celda";
-  cell.fills = [{ type: "SOLID", color: options.fill }];
-  cell.strokes = [{ type: "SOLID", color: { r: 0.72, g: 0.72, b: 0.72 } }];
-  cell.strokeWeight = 1;
+  cell.name = "Cell";
+  cell.fills = [];
   cell.clipsContent = false;
   cell.layoutMode = "VERTICAL";
-  cell.primaryAxisSizingMode = "AUTO";
-  cell.counterAxisSizingMode = "FIXED";
-  cell.layoutSizingHorizontal = "FILL";
-  cell.layoutSizingVertical = "HUG";
   cell.layoutGrow = 1;
+  cell.counterAxisSizingMode = "AUTO";
+  cell.primaryAxisSizingMode = "AUTO";
+  cell.minWidth = options.minWidth;
   cell.minHeight = 48;
-  cell.minWidth = 180;
-  cell.paddingTop = 14;
-  cell.paddingRight = 16;
-  cell.paddingBottom = 14;
-  cell.paddingLeft = 16;
-  cell.itemSpacing = 0;
-  cell.resize(Math.max(180, options.width), options.height);
+  cell.paddingLeft = options.padding;
+  cell.paddingRight = options.padding;
+  cell.paddingTop = options.padding;
+  cell.paddingBottom = options.padding;
 
   const text = figma.createText();
-  text.name = "Texto traduccion";
+  text.name = "Text";
   text.fontName = REGULAR_FONT;
-  text.fontSize = options.fontSize;
-  text.fills = [{ type: "SOLID", color: options.textColor }];
-  text.textAutoResize = "HEIGHT";
-  text.layoutSizingHorizontal = "FILL";
-  text.layoutSizingVertical = "HUG";
-  text.resize(Math.max(148, options.width - 32), 20);
   text.characters = options.text;
+  text.fontSize = 18;
+  text.textAutoResize = "HEIGHT";
+  text.layoutAlign = "STRETCH";
+  text.fills = [{ type: "SOLID", color: { r: 0.12, g: 0.12, b: 0.14 } }];
 
   cell.appendChild(text);
   options.parent.appendChild(cell);

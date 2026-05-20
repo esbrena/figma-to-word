@@ -29,10 +29,11 @@ import type {
 
 const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
 const exportSummary = getElement<HTMLDivElement>("exportSummary");
-const exportPdfButton = getElement<HTMLButtonElement>("exportPdfButton");
-const exportDocxButton = getElement<HTMLButtonElement>("exportDocxButton");
+const exportButton = getElement<HTMLButtonElement>("exportButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
-const statusMessage = getElement<HTMLDivElement>("statusMessage");
+const toast = getElement<HTMLDivElement>("toast");
+const toastMessage = getElement<HTMLParagraphElement>("toastMessage");
+const toastCloseButton = getElement<HTMLButtonElement>("toastCloseButton");
 
 let currentState: PluginState | null = null;
 
@@ -105,12 +106,12 @@ blocksContainer.addEventListener("change", (event) => {
   });
 });
 
-exportPdfButton.addEventListener("click", () => {
-  exportCurrentDocument("pdf");
+exportButton.addEventListener("click", () => {
+  void exportCurrentDocument(getSelectedFormat());
 });
 
-exportDocxButton.addEventListener("click", () => {
-  void exportCurrentDocument("docx");
+toastCloseButton.addEventListener("click", () => {
+  hideToast();
 });
 
 window.onmessage = (event: MessageEvent) => {
@@ -127,12 +128,11 @@ window.onmessage = (event: MessageEvent) => {
   }
 
   if (message.type === "busy") {
-    setStatus(message.payload.message);
     return;
   }
 
   if (message.type === "notice") {
-    setStatus(message.payload.message, message.payload.level === "error");
+    return;
   }
 };
 
@@ -150,8 +150,10 @@ function renderState(state: PluginState) {
   renderBlocks(state);
 
   const canExport = state.document.pairs.length > 0;
-  exportPdfButton.disabled = !canExport;
-  exportDocxButton.disabled = !canExport;
+  exportButton.disabled = !canExport;
+  exportButton.textContent = `Exportar ${state.document.pairs.length} bloque${
+    state.document.pairs.length === 1 ? "" : "s"
+  }`;
 
   if (canExport) {
     setDefaultFilename(state.document);
@@ -162,7 +164,9 @@ function renderSidebarSummary(state: PluginState) {
   const completedPairs = state.document.pairs;
 
   exportSummary.innerHTML = `
-    <strong>Exportar ${completedPairs.length} bloque${completedPairs.length === 1 ? "" : "s"}</strong>
+    <strong>${completedPairs.length} bloque${completedPairs.length === 1 ? "" : "s"} listo${
+      completedPairs.length === 1 ? "" : "s"
+    }</strong>
     <button id="resetButton" class="button summary-reset" type="button" ${
       state.blocks.length === 1 && !state.blocks[0].screen && !state.blocks[0].table
         ? "disabled"
@@ -290,20 +294,17 @@ function renderTranslationTable(table: TranslationTable) {
 
 function exportCurrentDocument(format: "pdf" | "docx") {
   if (!currentState) {
-    setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
+    showExportError("Campos obligatorios: anade al menos una pantalla y una tabla.");
     return;
   }
 
   if (hasPartiallyLoadedBlock(currentState.blocks)) {
-    setStatus(
-      "Faltan recursos por cargar. Corrige el problema antes de exportar.",
-      true,
-    );
+    showExportError("Faltan recursos por cargar. Corrige el problema antes de exportar.");
     return;
   }
 
   if (currentState.document.pairs.length === 0) {
-    setStatus("Campos obligatorios: anade al menos una pantalla y una tabla.", true);
+    showExportError("Campos obligatorios: anade al menos una pantalla y una tabla.");
     return;
   }
 
@@ -313,30 +314,25 @@ function exportCurrentDocument(format: "pdf" | "docx") {
   };
 
   setExportButtonsDisabled(true);
-  setStatus("Preparando descarga...");
+  hideToast();
 
   try {
     if (format === "pdf") {
       exportPdf(exportDocument);
-      setStatus("PDF listo. Si tu navegador lo solicita, confirma la descarga.");
     } else {
       exportDocx(exportDocument)
-        .then(() => {
-          setStatus("Word listo. Si tu navegador lo solicita, confirma la descarga.");
-        })
+        .then(() => undefined)
         .catch((error) => {
-          setStatus(
+          showExportError(
             error instanceof Error ? error.message : "No se pudo exportar el documento.",
-            true,
           );
         })
         .finally(() => setExportButtonsDisabled(false));
       return;
     }
   } catch (error) {
-    setStatus(
+    showExportError(
       error instanceof Error ? error.message : "No se pudo exportar el documento.",
-      true,
     );
   }
 
@@ -742,13 +738,24 @@ function formatDate(isoDate: string) {
 }
 
 function setExportButtonsDisabled(disabled: boolean) {
-  exportPdfButton.disabled = disabled;
-  exportDocxButton.disabled = disabled;
+  exportButton.disabled = disabled;
 }
 
-function setStatus(message: string, isError = false) {
-  statusMessage.textContent = message;
-  statusMessage.dataset.state = isError ? "error" : "info";
+function getSelectedFormat(): "pdf" | "docx" {
+  const selectedInput = document.querySelector<HTMLInputElement>(
+    'input[name="exportFormat"]:checked',
+  );
+
+  return selectedInput?.value === "pdf" ? "pdf" : "docx";
+}
+
+function showExportError(message: string) {
+  toastMessage.textContent = message;
+  toast.hidden = false;
+}
+
+function hideToast() {
+  toast.hidden = true;
 }
 
 function escapeHtml(value: string) {
