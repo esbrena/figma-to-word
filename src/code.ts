@@ -1,5 +1,6 @@
 import type {
   CapturedScreen,
+  ExportMode,
   PluginState,
   PluginToUiMessage,
   TranslationPair,
@@ -42,6 +43,7 @@ type TableTextBlock = {
 let nextBlockNumber = 1;
 const initialBlockId = createBlockId();
 let blocks: TranslationBlock[] = [{ id: initialBlockId, name: "Bloque 1" }];
+let exportMode: ExportMode | undefined;
 
 figma.showUI(__html__, {
   width: 800,
@@ -58,6 +60,12 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
 
   if (message.type === "state-request") {
     postState();
+    return;
+  }
+
+  if (message.type === "set-export-mode") {
+    exportMode = message.payload.mode;
+    resetBlocks(false);
     return;
   }
 
@@ -119,6 +127,7 @@ function postToUi(message: PluginToUiMessage) {
 function postState() {
   const completedPairs = getCompletedPairs();
   const state: PluginState = {
+    exportMode,
     blocks,
     document: {
       generatedAt: new Date().toISOString(),
@@ -150,11 +159,13 @@ function removeBlock(blockId: string) {
   postState();
 }
 
-function resetBlocks() {
+function resetBlocks(notify = true) {
   const blockNumber = nextBlockNumber;
   const block = { id: createBlockId(), name: `Bloque ${blockNumber}` };
   blocks = [block];
-  postNotice("Documento reiniciado.", "info");
+  if (notify) {
+    postNotice("Documento reiniciado.", "info");
+  }
   postState();
 }
 
@@ -191,7 +202,9 @@ function getCompletedPairs(): TranslationPair[] {
   return blocks
     .filter(
       (block): block is TranslationPair =>
-        Boolean(block.name) && Boolean(block.screen) && Boolean(block.table),
+        Boolean(block.name) &&
+        Boolean(block.table) &&
+        (exportMode === "table-only" || Boolean(block.screen)),
     )
     .map((block) => ({
       id: block.id,

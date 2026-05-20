@@ -1,3 +1,5 @@
+export type ExportMode = "screen-table" | "table-only";
+
 export type CapturedScreen = {
   id: string;
   name: string;
@@ -16,7 +18,7 @@ export type TranslationTable = {
 export type TranslationPair = {
   id: string;
   name: string;
-  screen: CapturedScreen;
+  screen?: CapturedScreen;
   table: TranslationTable;
 };
 
@@ -33,12 +35,14 @@ export type ExportDocument = {
 };
 
 export type PluginState = {
+  exportMode?: ExportMode;
   blocks: TranslationBlock[];
   document: ExportDocument;
 };
 
 export type UiToPluginMessage =
   | { type: "state-request" }
+  | { type: "set-export-mode"; payload: { mode: ExportMode } }
   | {
       type: "layout-ready";
       payload: {

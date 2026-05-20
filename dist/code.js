@@ -43,6 +43,7 @@
   var nextBlockNumber = 1;
   var initialBlockId = createBlockId();
   var blocks = [{ id: initialBlockId, name: "Bloque 1" }];
+  var exportMode;
   figma.showUI(__html__, {
     width: 800,
     height: 620,
@@ -56,6 +57,11 @@
     }
     if (message.type === "state-request") {
       postState();
+      return;
+    }
+    if (message.type === "set-export-mode") {
+      exportMode = message.payload.mode;
+      resetBlocks(false);
       return;
     }
     if (message.type === "add-block") {
@@ -104,6 +110,7 @@
   function postState() {
     const completedPairs = getCompletedPairs();
     const state = {
+      exportMode,
       blocks,
       document: {
         generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -129,11 +136,13 @@
     blocks = blocks.filter((block) => block.id !== blockId);
     postState();
   }
-  function resetBlocks() {
+  function resetBlocks(notify = true) {
     const blockNumber = nextBlockNumber;
     const block = { id: createBlockId(), name: `Bloque ${blockNumber}` };
     blocks = [block];
-    postNotice("Documento reiniciado.", "info");
+    if (notify) {
+      postNotice("Documento reiniciado.", "info");
+    }
     postState();
   }
   function createBlockId() {
@@ -158,7 +167,7 @@
   }
   function getCompletedPairs() {
     return blocks.filter(
-      (block) => Boolean(block.name) && Boolean(block.screen) && Boolean(block.table)
+      (block) => Boolean(block.name) && Boolean(block.table) && (exportMode === "table-only" || Boolean(block.screen))
     ).map((block) => ({
       id: block.id,
       name: block.name,

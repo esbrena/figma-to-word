@@ -16,9 +16,11 @@ import {
   TextRun,
   WidthType,
 } from "docx";
+import ExcelJS from "exceljs";
 import { jsPDF } from "jspdf";
 import type {
   ExportDocument,
+  ExportMode,
   PluginState,
   PluginToUiMessage,
   TranslationBlock,
@@ -27,9 +29,13 @@ import type {
   UiToPluginMessage,
 } from "./types";
 
+type ExportFormat = "pdf" | "docx" | "xlsx";
+
 const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
 const exportButton = getElement<HTMLButtonElement>("exportButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
+const mergeTablesWrapper = getElement<HTMLLabelElement>("mergeTablesWrapper");
+const mergeTablesCheckbox = getElement<HTMLInputElement>("mergeTablesCheckbox");
 const toast = getElement<HTMLDivElement>("toast");
 const toastMessage = getElement<HTMLParagraphElement>("toastMessage");
 const toastCloseButton = getElement<HTMLButtonElement>("toastCloseButton");
@@ -43,7 +49,16 @@ blocksContainer.addEventListener("click", (event) => {
     return;
   }
 
+  const selectedMode = target.dataset.exportMode as ExportMode | undefined;
   const captureScreenBlockId = target.dataset.captureScreen;
+  if (selectedMode) {
+    postMessageToPlugin({
+      type: "set-export-mode",
+      payload: { mode: selectedMode },
+    });
+    return;
+  }
+
   const captureTableBlockId = target.dataset.captureTable;
   const importTemplate = target.dataset.importTemplate;
   const removeBlockId = target.dataset.removeBlock;
@@ -144,6 +159,8 @@ postMessageToPlugin({ type: "state-request" });
 
 function renderState(state: PluginState) {
   renderBlocks(state);
+  document.body.dataset.hasMode = state.exportMode ? "true" : "false";
+  mergeTablesWrapper.hidden = state.exportMode !== "table-only";
 
   const canExport = state.document.pairs.length > 0;
   exportButton.disabled = !canExport;
@@ -157,8 +174,14 @@ function renderState(state: PluginState) {
 }
 
 function renderBlocks(state: PluginState) {
+  if (!state.exportMode) {
+    blocksContainer.innerHTML = renderModeSelection();
+    return;
+  }
+
+  const mode = state.exportMode;
   const lastBlock = state.blocks[state.blocks.length - 1];
-  const canAddAnother = Boolean(lastBlock && lastBlock.screen && lastBlock.table);
+  const canAddAnother = isBlockComplete(lastBlock, mode);
 
   blocksContainer.innerHTML = `
     <header class="app-header">
@@ -166,7 +189,9 @@ function renderBlocks(state: PluginState) {
       <p>Exporta pantallas UI junto a sus tablas de traduccion.</p>
     </header>
     ${state.blocks
-      .map((block, index) => renderBlock(block, index, state.blocks.length))
+      .map((block, index) =>
+        renderBlock(block, index, state.blocks.length, mode),
+      )
       .join("")}
     ${
       canAddAnother
@@ -179,8 +204,32 @@ function renderBlocks(state: PluginState) {
   `;
 }
 
-function renderBlock(block: TranslationBlock, index: number, totalBlocks: number) {
-  const isComplete = Boolean(block.screen && block.table);
+function renderModeSelection() {
+  return `
+    <header class="app-header">
+      <h1>UI Translation Exporter</h1>
+      <p>Elige que tipo de documento quieres construir.</p>
+    </header>
+    <section class="mode-grid" aria-label="Tipo de exportacion">
+      <button class="mode-card" type="button" data-export-mode="screen-table">
+        <strong>Exportar pantalla + tabla</strong>
+        <span>Documenta cada pantalla junto a su tabla de traducciones.</span>
+      </button>
+      <button class="mode-card" type="button" data-export-mode="table-only">
+        <strong>Exportar solo tabla</strong>
+        <span>Crea un documento o Excel solo con tablas de traducciones.</span>
+      </button>
+    </section>
+  `;
+}
+
+function renderBlock(
+  block: TranslationBlock,
+  index: number,
+  totalBlocks: number,
+  mode: ExportMode,
+) {
+  const isComplete = isBlockComplete(block, mode);
 
   return `
     <article class="translation-block">
@@ -204,22 +253,28 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
             : ""
         }
       </div>
-      <div class="block-grid">
-        <section class="block-panel">
-          <div class="step-title">
-            <strong>Pantalla</strong>
-          </div>
-          ${
-            block.screen
-              ? `<img class="screen-image" src="${block.screen.dataUrl}" alt="${escapeHtml(
-                  block.screen.name,
-                )}" />`
-              : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame.</p>`
-          }
-          <button class="button primary" type="button" data-capture-screen="${block.id}">
-            ${block.screen ? "Reemplazar pantalla" : "Cargar pantalla seleccionada"}
-          </button>
-        </section>
+      <div class="block-grid ${mode === "table-only" ? "table-only-grid" : ""}">
+        ${
+          mode === "screen-table"
+            ? `
+              <section class="block-panel">
+                <div class="step-title">
+                  <strong>Pantalla</strong>
+                </div>
+                ${
+                  block.screen
+                    ? `<img class="screen-image" src="${block.screen.dataUrl}" alt="${escapeHtml(
+                        block.screen.name,
+                      )}" />`
+                    : `<p class="empty-note">Selecciona en Figma una imagen PNG o frame.</p>`
+                }
+                <button class="button primary" type="button" data-capture-screen="${block.id}">
+                  ${block.screen ? "Reemplazar pantalla" : "Cargar pantalla seleccionada"}
+                </button>
+              </section>
+            `
+            : ""
+        }
         <section class="block-panel">
           <div class="step-title">
             <strong>Tabla de traducciones</strong>
@@ -239,6 +294,14 @@ function renderBlock(block: TranslationBlock, index: number, totalBlocks: number
       </div>
     </article>
   `;
+}
+
+function isBlockComplete(block: TranslationBlock | undefined, mode: ExportMode) {
+  if (!block) {
+    return false;
+  }
+
+  return Boolean(block.table) && (mode === "table-only" || Boolean(block.screen));
 }
 
 function renderTranslationTable(table: TranslationTable) {
@@ -265,13 +328,18 @@ function renderTranslationTable(table: TranslationTable) {
   `;
 }
 
-function exportCurrentDocument(format: "pdf" | "docx") {
+function exportCurrentDocument(format: ExportFormat) {
   if (!currentState) {
     showExportError("Campos obligatorios: anade al menos una pantalla y una tabla.");
     return;
   }
 
-  if (hasPartiallyLoadedBlock(currentState.blocks)) {
+  if (!currentState.exportMode) {
+    showExportError("Selecciona primero un tipo de exportacion.");
+    return;
+  }
+
+  if (hasPartiallyLoadedBlock(currentState.blocks, currentState.exportMode)) {
     showExportError("Faltan recursos por cargar. Corrige el problema antes de exportar.");
     return;
   }
@@ -290,7 +358,17 @@ function exportCurrentDocument(format: "pdf" | "docx") {
   hideToast();
 
   try {
-    if (format === "pdf") {
+    if (format === "xlsx") {
+      exportXlsx(exportDocument, mergeTablesCheckbox.checked)
+        .then(() => undefined)
+        .catch((error) => {
+          showExportError(
+            error instanceof Error ? error.message : "No se pudo exportar el documento.",
+          );
+        })
+        .finally(() => setExportButtonsDisabled(false));
+      return;
+    } else if (format === "pdf") {
       exportPdf(exportDocument);
     } else {
       exportDocx(exportDocument)
@@ -312,8 +390,14 @@ function exportCurrentDocument(format: "pdf" | "docx") {
   setExportButtonsDisabled(false);
 }
 
-function hasPartiallyLoadedBlock(blocks: TranslationBlock[]) {
-  return blocks.some((block) => Boolean(block.screen) !== Boolean(block.table));
+function hasPartiallyLoadedBlock(blocks: TranslationBlock[], mode: ExportMode) {
+  return blocks.some((block) => {
+    if (mode === "table-only") {
+      return Boolean(block.screen) && !block.table;
+    }
+
+    return Boolean(block.screen) !== Boolean(block.table);
+  });
 }
 
 function exportPdf(document: ExportDocument) {
@@ -352,10 +436,19 @@ function exportPdf(document: ExportDocument) {
     const leftWidth = (pageWidth - margin * 2 - gap) * 0.45;
     const rightWidth = pageWidth - margin * 2 - gap - leftWidth;
     const maxContentHeight = pageHeight - y - margin;
-    const imageSize = fitWithin(pair.screen.width, pair.screen.height, leftWidth, maxContentHeight);
+    if (pair.screen) {
+      const imageSize = fitWithin(
+        pair.screen.width,
+        pair.screen.height,
+        leftWidth,
+        maxContentHeight,
+      );
 
-    pdf.addImage(pair.screen.dataUrl, "JPEG", margin, y, imageSize.width, imageSize.height);
-    drawPdfTable(pdf, pair.table, margin + leftWidth + gap, y, rightWidth, maxContentHeight);
+      pdf.addImage(pair.screen.dataUrl, "JPEG", margin, y, imageSize.width, imageSize.height);
+      drawPdfTable(pdf, pair.table, margin + leftWidth + gap, y, rightWidth, maxContentHeight);
+    } else {
+      drawPdfTable(pdf, pair.table, margin, y, pageWidth - margin * 2, maxContentHeight);
+    }
   });
 
   pdf.save(`${title}.pdf`);
@@ -483,7 +576,6 @@ async function exportDocx(document: ExportDocument) {
 }
 
 function buildDocxPair(pair: TranslationPair, index: number): FileChild[] {
-  const imageSize = fitWithin(pair.screen.width, pair.screen.height, 300, 360);
   const translationTable = buildDocxTranslationTable(pair.table);
   const outerBorder = {
     style: BorderStyle.SINGLE,
@@ -497,43 +589,152 @@ function buildDocxPair(pair: TranslationPair, index: number): FileChild[] {
       heading: HeadingLevel.HEADING_1,
       spacing: { before: index === 0 ? 0 : 360, after: 120 },
     }),
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: outerBorder,
-        bottom: outerBorder,
-        left: outerBorder,
-        right: outerBorder,
-        insideHorizontal: outerBorder,
-        insideVertical: outerBorder,
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: 45, type: WidthType.PERCENTAGE },
-              children: [
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [
-                    new ImageRun({
-                      type: "jpg",
-                      data: dataUrlToUint8Array(pair.screen.dataUrl),
-                      transformation: imageSize,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new TableCell({
-              width: { size: 55, type: WidthType.PERCENTAGE },
-              children: [translationTable],
-            }),
-          ],
-        }),
-      ],
-    }),
+    pair.screen
+      ? buildDocxScreenTable(pair, translationTable, outerBorder)
+      : translationTable,
   ];
+}
+
+function buildDocxScreenTable(
+  pair: TranslationPair,
+  translationTable: Table,
+  outerBorder: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; color: string; size: number },
+) {
+  const screen = pair.screen;
+
+  if (!screen) {
+    return translationTable;
+  }
+
+  const imageSize = fitWithin(screen.width, screen.height, 300, 360);
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: outerBorder,
+      bottom: outerBorder,
+      left: outerBorder,
+      right: outerBorder,
+      insideHorizontal: outerBorder,
+      insideVertical: outerBorder,
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 45, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new ImageRun({
+                    type: "jpg",
+                    data: dataUrlToUint8Array(screen.dataUrl),
+                    transformation: imageSize,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: 55, type: WidthType.PERCENTAGE },
+            children: [translationTable],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+async function exportXlsx(document: ExportDocument, mergeTables: boolean) {
+  if (mergeTables) {
+    assertSameColumns(document.pairs);
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "UI Translation Exporter";
+  workbook.created = new Date(document.generatedAt);
+
+  if (mergeTables) {
+    const mergedRows: string[][] = [];
+    document.pairs.forEach((pair) => {
+      mergedRows.push(...pair.table.rows);
+    });
+    addTableWorksheet(workbook, "Traducciones", mergedRows, document.pairs[0].table.headers);
+  } else {
+    document.pairs.forEach((pair, index) => {
+      addTableWorksheet(
+        workbook,
+        sanitizeWorksheetName(pair.name || `Bloque ${index + 1}`),
+        pair.table.rows,
+        pair.table.headers,
+      );
+    });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(
+    new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }),
+    `${getFilenameWithoutExtension()}.xlsx`,
+  );
+}
+
+function addTableWorksheet(
+  workbook: ExcelJS.Workbook,
+  name: string,
+  rows: string[][],
+  headers: string[],
+) {
+  const worksheet = workbook.addWorksheet(name);
+  worksheet.addRow(headers.map(documentSafeText));
+  rows.forEach((row) => worksheet.addRow(headers.map((_, index) => documentSafeText(row[index] || ""))));
+
+  worksheet.columns = headers.map(() => ({ width: 28 }));
+  worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+  worksheet.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF6F6F6F" },
+  };
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: "top", wrapText: true };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFD9D9D9" } },
+        left: { style: "thin", color: { argb: "FFD9D9D9" } },
+        bottom: { style: "thin", color: { argb: "FFD9D9D9" } },
+        right: { style: "thin", color: { argb: "FFD9D9D9" } },
+      };
+    });
+  });
+}
+
+function assertSameColumns(pairs: TranslationPair[]) {
+  const firstHeaders = pairs[0]?.table.headers;
+
+  if (!firstHeaders) {
+    return;
+  }
+
+  const reference = normalizeHeaders(firstHeaders);
+  const hasDifferentColumns = pairs.some(
+    (pair) => normalizeHeaders(pair.table.headers) !== reference,
+  );
+
+  if (hasDifferentColumns) {
+    throw new Error("Las tablas son distintas, no se pueden exportar en una misma tabla.");
+  }
+}
+
+function normalizeHeaders(headers: string[]) {
+  return headers.map((header) => documentSafeText(header).toLowerCase()).join("|");
+}
+
+function sanitizeWorksheetName(value: string) {
+  const sanitized = documentSafeText(value).replace(/[\\/*?:[\]]/g, "").slice(0, 31);
+  return sanitized || "Traducciones";
 }
 
 function buildDocxTranslationTable(table: TranslationTable) {
@@ -714,12 +915,20 @@ function setExportButtonsDisabled(disabled: boolean) {
   exportButton.disabled = disabled;
 }
 
-function getSelectedFormat(): "pdf" | "docx" {
+function getSelectedFormat(): ExportFormat {
   const selectedInput = document.querySelector<HTMLInputElement>(
     'input[name="exportFormat"]:checked',
   );
 
-  return selectedInput?.value === "pdf" ? "pdf" : "docx";
+  if (selectedInput?.value === "pdf") {
+    return "pdf";
+  }
+
+  if (selectedInput?.value === "xlsx") {
+    return "xlsx";
+  }
+
+  return "docx";
 }
 
 function showExportError(message: string) {
