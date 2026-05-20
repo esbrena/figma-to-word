@@ -92,6 +92,11 @@
       resetBlocks();
       return;
     }
+    if (message.type === "cancel-flow") {
+      exportMode = void 0;
+      resetBlocks(false);
+      return;
+    }
   };
   postState();
   function applyInitialUiLayout(availWidth, availHeight) {

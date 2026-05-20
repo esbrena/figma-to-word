@@ -33,9 +33,11 @@ type ExportFormat = "pdf" | "docx" | "xlsx";
 
 const blocksContainer = getElement<HTMLDivElement>("blocksContainer");
 const exportButton = getElement<HTMLButtonElement>("exportButton");
+const cancelButton = getElement<HTMLButtonElement>("cancelButton");
 const filenameInput = getElement<HTMLInputElement>("filenameInput");
 const mergeTablesWrapper = getElement<HTMLLabelElement>("mergeTablesWrapper");
 const mergeTablesCheckbox = getElement<HTMLInputElement>("mergeTablesCheckbox");
+const xlsFormatOption = getElement<HTMLLabelElement>("xlsFormatOption");
 const toast = getElement<HTMLDivElement>("toast");
 const toastMessage = getElement<HTMLParagraphElement>("toastMessage");
 const toastCloseButton = getElement<HTMLButtonElement>("toastCloseButton");
@@ -130,6 +132,11 @@ exportButton.addEventListener("click", () => {
   void exportCurrentDocument(getSelectedFormat());
 });
 
+cancelButton.addEventListener("click", () => {
+  hideToast();
+  postMessageToPlugin({ type: "cancel-flow" });
+});
+
 toastCloseButton.addEventListener("click", () => {
   hideToast();
 });
@@ -169,6 +176,17 @@ function renderState(state: PluginState) {
   renderBlocks(state);
   document.body.dataset.hasMode = state.exportMode ? "true" : "false";
   mergeTablesWrapper.hidden = state.exportMode !== "table-only";
+  xlsFormatOption.hidden = state.exportMode === "screen-table";
+
+  if (state.exportMode === "screen-table" && getSelectedFormat() === "xlsx") {
+    const wordInput = document.querySelector<HTMLInputElement>(
+      'input[name="exportFormat"][value="docx"]',
+    );
+
+    if (wordInput) {
+      wordInput.checked = true;
+    }
+  }
 
   const canExport = state.document.pairs.length > 0;
   exportButton.disabled = !canExport;
@@ -204,7 +222,7 @@ function renderBlocks(state: PluginState) {
     ${
       canAddAnother
         ? `<button class="button secondary add-block" type="button" data-add-block="true">
-            Anadir otra pantalla
+            Anadir bloque
           </button>`
         : ""
     }
@@ -252,6 +270,12 @@ function renderModeSelection() {
         </span>
         <strong>Exportar solo tabla</strong>
         <span>Crea un documento o Excel solo con tablas de traducciones.</span>
+      </button>
+    </section>
+    <section class="template-entry">
+      <div class="template-divider"><span>¿Necesito una tabla para traducciones?</span></div>
+      <button class="link-button" type="button" data-import-template="true">
+        Insertar tabla de ejemplo
       </button>
     </section>
   `;
@@ -320,9 +344,6 @@ function renderBlock(
           }
           <button class="button primary" type="button" data-capture-table="${block.id}">
             ${block.table ? "Reemplazar tabla" : "Cargar tabla seleccionada"}
-          </button>
-          <button class="link-button" type="button" data-import-template="true">
-            Insertar tabla de ejemplo
           </button>
         </section>
       </div>

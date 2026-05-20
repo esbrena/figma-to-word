@@ -56,7 +56,8 @@ export type UiToPluginMessage =
   | { type: "capture-table"; payload: { blockId: string } }
   | { type: "import-template-table" }
   | { type: "remove-block"; payload: { blockId: string } }
-  | { type: "reset" };
+  | { type: "reset" }
+  | { type: "cancel-flow" };
 
 export type PluginToUiMessage =
   | { type: "state"; payload: PluginState }

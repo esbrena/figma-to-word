@@ -104,6 +104,12 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
     return;
   }
 
+  if (message.type === "cancel-flow") {
+    exportMode = undefined;
+    resetBlocks(false);
+    return;
+  }
+
 };
 
 postState();

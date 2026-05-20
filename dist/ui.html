@@ -57,7 +57,7 @@
         left: 0;
         z-index: 10;
         display: grid;
-        grid-template-columns: minmax(220px, 0.9fr) auto auto minmax(150px, 0.7fr);
+        grid-template-columns: minmax(220px, 0.9fr) auto auto auto minmax(150px, 0.7fr);
         align-items: center;
         gap: 16px;
         margin: 0 16px 16px;
@@ -227,6 +227,11 @@
         box-shadow: 0 0 0 1px #3b82f6 inset;
       }
 
+      .format-option[hidden],
+      .merge-option[hidden] {
+        display: none;
+      }
+
       .pdf-button .button-icon {
         color: #dc2626;
         background: rgba(220, 38, 38, 0.1);
@@ -321,6 +326,10 @@
         box-shadow: 0 10px 24px rgba(67, 142, 255, 0.24);
       }
 
+      .cancel-button {
+        white-space: nowrap;
+      }
+
       .main {
         min-width: 0;
         min-height: 0;
@@ -412,6 +421,31 @@
       .mode-card span {
         color: var(--text-muted);
         line-height: 1.45;
+      }
+
+      .template-entry {
+        display: grid;
+        justify-items: center;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .template-divider {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 14px;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .template-divider::before,
+      .template-divider::after {
+        content: "";
+        height: 1px;
+        flex: 1;
+        background: var(--border);
       }
 
       .blocks-header {
@@ -519,6 +553,10 @@
         grid-template-columns: repeat(2, minmax(180px, 1fr));
         gap: 16px;
         align-items: start;
+      }
+
+      .block-grid.table-only-grid {
+        grid-template-columns: 1fr;
       }
 
       .block-panel {
@@ -655,7 +693,7 @@
                 PDF
               </span>
             </label>
-            <label class="format-option">
+            <label id="xlsFormatOption" class="format-option">
               <input type="radio" name="exportFormat" value="xlsx" />
               <span>
                 <svg class="xls-icon" viewBox="0 0 134 85" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -674,6 +712,10 @@
           <input id="mergeTablesCheckbox" type="checkbox" />
           Exportar todo en una tabla
         </label>
+
+        <button id="cancelButton" class="button cancel-button" type="button">
+          Cancelar
+        </button>
 
         <button id="exportButton" class="button primary" type="button" disabled>
           Exportar 0 bloques
@@ -77928,9 +77970,11 @@
   // src/ui.ts
   var blocksContainer = getElement("blocksContainer");
   var exportButton = getElement("exportButton");
+  var cancelButton = getElement("cancelButton");
   var filenameInput = getElement("filenameInput");
   var mergeTablesWrapper = getElement("mergeTablesWrapper");
   var mergeTablesCheckbox = getElement("mergeTablesCheckbox");
+  var xlsFormatOption = getElement("xlsFormatOption");
   var toast = getElement("toast");
   var toastMessage = getElement("toastMessage");
   var toastCloseButton = getElement("toastCloseButton");
@@ -78006,6 +78050,10 @@
   exportButton.addEventListener("click", () => {
     void exportCurrentDocument(getSelectedFormat());
   });
+  cancelButton.addEventListener("click", () => {
+    hideToast();
+    postMessageToPlugin({ type: "cancel-flow" });
+  });
   toastCloseButton.addEventListener("click", () => {
     hideToast();
   });
@@ -78038,6 +78086,15 @@
     renderBlocks(state2);
     document.body.dataset.hasMode = state2.exportMode ? "true" : "false";
     mergeTablesWrapper.hidden = state2.exportMode !== "table-only";
+    xlsFormatOption.hidden = state2.exportMode === "screen-table";
+    if (state2.exportMode === "screen-table" && getSelectedFormat() === "xlsx") {
+      const wordInput = document.querySelector(
+        'input[name="exportFormat"][value="docx"]'
+      );
+      if (wordInput) {
+        wordInput.checked = true;
+      }
+    }
     const canExport = state2.document.pairs.length > 0;
     exportButton.disabled = !canExport;
     exportButton.textContent = `Exportar ${state2.document.pairs.length} bloque${state2.document.pairs.length === 1 ? "" : "s"}`;
@@ -78062,7 +78119,7 @@
       (block, index2) => renderBlock(block, index2, state2.blocks.length, mode)
     ).join("")}
     ${canAddAnother ? `<button class="button secondary add-block" type="button" data-add-block="true">
-            Anadir otra pantalla
+            Anadir bloque
           </button>` : ""}
     <p class="workflow-help">Completa un bloque con pantalla y tabla para habilitar la exportacion.</p>
   `;
@@ -78109,6 +78166,12 @@
         <span>Crea un documento o Excel solo con tablas de traducciones.</span>
       </button>
     </section>
+    <section class="template-entry">
+      <div class="template-divider"><span>\xBFNecesito una tabla para traducciones?</span></div>
+      <button class="link-button" type="button" data-import-template="true">
+        Insertar tabla de ejemplo
+      </button>
+    </section>
   `;
   }
   function renderBlock(block, index2, totalBlocks, mode) {
@@ -78152,9 +78215,6 @@
           ${block.table ? renderTranslationTable(block.table) : `<p class="empty-note">Selecciona la tabla editable en Figma.</p>`}
           <button class="button primary" type="button" data-capture-table="${block.id}">
             ${block.table ? "Reemplazar tabla" : "Cargar tabla seleccionada"}
-          </button>
-          <button class="link-button" type="button" data-import-template="true">
-            Insertar tabla de ejemplo
           </button>
         </section>
       </div>
