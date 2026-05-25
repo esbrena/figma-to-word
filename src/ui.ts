@@ -1056,3 +1056,62 @@ document
       }
     });
   });
+
+const replaceVariablesEnabled =
+  document.getElementById(
+    "replaceVariablesEnabled",
+  ) as HTMLInputElement;
+
+const variableReplacementFields =
+  document.getElementById(
+    "variableReplacementFields",
+  ) as HTMLDivElement;
+
+const variablePattern =
+  document.getElementById(
+    "variablePattern",
+  ) as HTMLSelectElement;
+
+const variableReplacement =
+  document.getElementById(
+    "variableReplacement",
+  ) as HTMLSelectElement;
+
+function updateVariableReplacementVisibility() {
+  if (replaceVariablesEnabled.checked) {
+    variableReplacementFields.classList.remove("hidden");
+  } else {
+    variableReplacementFields.classList.add("hidden");
+  }
+}
+function sendVariableConfig() {
+  parent.postMessage(
+    {
+      pluginMessage: {
+        type: "set-variable-replacement",
+        payload: {
+          enabled: replaceVariablesEnabled.checked,
+          patternId: variablePattern.value,
+          replacementId: variableReplacement.value,
+        },
+      },
+    },
+    "*",
+  );
+}
+replaceVariablesEnabled.addEventListener(
+  "change",
+  () => {
+    updateVariableReplacementVisibility();
+    sendVariableConfig();
+  },
+);
+variablePattern.addEventListener(
+  "change",
+  sendVariableConfig,
+);
+
+variableReplacement.addEventListener(
+  "change",
+  sendVariableConfig,
+);

@@ -35,6 +35,48 @@ const TEMPLATE_ROWS = [
 const REGULAR_FONT: FontName = { family: "Inter", style: "Regular" };
 const SEMIBOLD_FONT: FontName = { family: "Inter", style: "Semi Bold" };
 
+/*BUSCAR Y REMPLAZAR*/
+const VARIABLE_PATTERNS = [
+  {
+    id: "curly",
+    label: "{variable}",
+    regex: "\\{.*?\\}",
+  },
+  {
+    id: "double-curly",
+    label: "{{variable}}",
+    regex: "\\{\\{.*?\\}\\}",
+  },
+  {
+    id: "template-literal",
+    label: "${variable}",
+    regex: "\\$\\{.*?\\}",
+  },
+  {
+    id: "colon",
+    label: ":variable",
+    regex: ":\\w+",
+  },
+];
+
+const VARIABLE_REPLACEMENTS = [
+  {
+    id: "percent-s",
+    label: "%s",
+    value: "%s",
+  },
+  {
+    id: "ios",
+    label: "%@",
+    value: "%@",
+  },
+  {
+    id: "indexed",
+    label: "{0}",
+    value: "{0}",
+  },
+];
+
 type TableTextBlock = {
   text: string;
   x: number;
@@ -47,6 +89,12 @@ let nextBlockNumber = 1;
 const initialBlockId = createBlockId();
 let blocks: TranslationBlock[] = [{ id: initialBlockId, name: "Bloque" }];
 let exportMode: ExportMode | undefined;
+
+/*Buscar y reemplazar*/
+let variableReplacementEnabled = false;
+let selectedVariablePattern = VARIABLE_PATTERNS[0];
+let selectedVariableReplacement = VARIABLE_REPLACEMENTS[0];
+
 
 figma.showUI(__html__, {
   width: 800,
@@ -113,6 +161,22 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
     return;
   }
 
+  if (message.type === "set-variable-replacement") {
+    variableReplacementEnabled = message.payload.enabled;
+
+    selectedVariablePattern =
+      VARIABLE_PATTERNS.find(
+        (item) => item.id === message.payload.patternId,
+      ) || VARIABLE_PATTERNS[0];
+
+    selectedVariableReplacement =
+      VARIABLE_REPLACEMENTS.find(
+        (item) => item.id === message.payload.replacementId,
+      ) || VARIABLE_REPLACEMENTS[0];
+
+    return;
+  }
+
 };
 
 postState();
@@ -149,6 +213,26 @@ function postState() {
 
 function postNotice(message: string, level: "info" | "error" = "info") {
   postToUi({ type: "notice", payload: { message, level } });
+}
+
+function normalizeTranslationText(text: string): string {
+  if (!variableReplacementEnabled) {
+    return text;
+  }
+
+  try {
+    const regex = new RegExp(
+      selectedVariablePattern.regex,
+      "g",
+    );
+
+    return text.replace(
+      regex,
+      selectedVariableReplacement.value,
+    );
+  } catch {
+    return text;
+  }
 }
 
 function addBlock() {
@@ -672,12 +756,14 @@ function extractCellText(cell: FrameNode): string {
     return boxA.x - boxB.x;
   });
 
-  return textNodes
-    .map((node) => node.characters.trim())
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\\s+/g, " ")
-    .trim();
+  return normalizeTranslationText(
+      textNodes
+        .map((node) => node.characters.trim())
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim(),
+      );
 }
 
 function walkVisibleNodes(node: SceneNode, visit: (node: SceneNode) => void) {

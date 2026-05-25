@@ -35,7 +35,7 @@
           radial-gradient(circle at top left, rgba(13, 153, 255, 0.12), transparent 34%),
           var(--background);
         color: var(--text);
-        font-size: 13px;
+        font-size: 12px;
       }
 
       button,
@@ -521,7 +521,7 @@
         padding: 7px 30px 7px 9px;
         background: transparent;
         color: var(--text);
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 800;
         letter-spacing: -0.02em;
         outline: none;
@@ -579,24 +579,22 @@
         display: grid;
         align-content: center;
         justify-items: center;
-        gap: 12px;
+        gap: 8px;
         min-height: 220px;
-        padding: 22px;
+        padding: 16px;
         border: 1.5px dashed #91C4FF;
-        border-radius: 18px;
+        border-radius: 16px;
         background: rgba(255, 255, 255, 0.58);
         text-align: center;
       }
 
-      .step-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      .step-title, .block-panel > .table-wrapper > strong {
+        display:none;
       }
 
       .screen-image {
         width: 100%;
-        max-height: 240px;
+        max-height: 180px;
         object-fit: contain;
         border: 1px solid var(--border);
         border-radius: 16px;
@@ -614,7 +612,7 @@
         gap: 8px;
         justify-self: stretch;
         overflow: auto;
-        max-height: 240px;
+        max-height: 180px;
         text-align: left;
       }
 
@@ -622,6 +620,7 @@
         width: 100%;
         border-collapse: collapse;
         background: var(--background);
+        font-size:12px;
       }
 
       th {
@@ -667,6 +666,70 @@
       #mergeTablesWrapper {
         width:100%;
       }
+
+
+      .variable-replacement {
+        margin-top: 0px;
+        padding: 8px;
+        display: flex;
+        width: 100%;
+        border: 1px solid #e6e6e6;
+        border-radius: 12px;
+        background: #fafafa;
+        flex-direction: row;
+      }
+
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        width:30%;
+      }
+
+      .variable-fields {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        margin-top: 0px;
+        width: 70%;
+        align-items: center;
+        justify-content: flex-end;
+      }
+
+      .field-replace {
+        display: flex;
+        flex-direction: row;
+        gap: 4px;
+        align-items: center;
+      }
+
+      .field-replace label {
+        font-size: 12px;
+        font-weight: 500;
+        color: #555;
+      }
+
+      .field-replace select {
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 8px;
+        border: 1px solid #d9d9d9;
+        background: white;
+        font-size: 12px;
+        outline: none;
+      }
+
+      .field-replace select:focus {
+        border-color: #18a0fb;
+      }
+
+      .hidden {
+        display: none;
+      }
+
     </style>
   </head>
   <body>
@@ -724,6 +787,48 @@
           <input id="mergeTablesCheckbox" type="checkbox" />
           Exportar todo en una tabla
         </label>
+
+        <div class="variable-replacement">
+
+            <label class="checkbox-row">
+              <input
+                type="checkbox"
+                id="replaceVariablesEnabled"
+              />
+
+              <span>Replazar variables</span>
+            </label>
+
+            <div
+              id="variableReplacementFields"
+              class="variable-fields hidden"
+            >
+
+              <div class="field-replace">
+                <label>Variable</label>
+
+                <select id="variablePattern">
+                  <option value="curly">{variable}</option>
+                  <option value="double-curly">{{variable}}</option>
+                  <option value="template-literal">${variable}</option>
+                  <option value="colon">:variable</option>
+                </select>
+              </div>
+
+              <div class="field-replace">
+                <label>Replazar por</label>
+
+                <select id="variableReplacement">
+                  <option value="percent-s">%s</option>
+                  <option value="ios">%@</option>
+                  <option value="indexed">{0}</option>
+                </select>
+              </div>
+
+            </div>
+
+          </div>
+
 
         <button id="exportButton" class="button primary" type="button" disabled>
           Exportar 0 bloques
@@ -78771,6 +78876,55 @@
       }
     });
   });
+  var replaceVariablesEnabled = document.getElementById(
+    "replaceVariablesEnabled"
+  );
+  var variableReplacementFields = document.getElementById(
+    "variableReplacementFields"
+  );
+  var variablePattern = document.getElementById(
+    "variablePattern"
+  );
+  var variableReplacement = document.getElementById(
+    "variableReplacement"
+  );
+  function updateVariableReplacementVisibility() {
+    if (replaceVariablesEnabled.checked) {
+      variableReplacementFields.classList.remove("hidden");
+    } else {
+      variableReplacementFields.classList.add("hidden");
+    }
+  }
+  function sendVariableConfig() {
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "set-variable-replacement",
+          payload: {
+            enabled: replaceVariablesEnabled.checked,
+            patternId: variablePattern.value,
+            replacementId: variableReplacement.value
+          }
+        }
+      },
+      "*"
+    );
+  }
+  replaceVariablesEnabled.addEventListener(
+    "change",
+    () => {
+      updateVariableReplacementVisibility();
+      sendVariableConfig();
+    }
+  );
+  variablePattern.addEventListener(
+    "change",
+    sendVariableConfig
+  );
+  variableReplacement.addEventListener(
+    "change",
+    sendVariableConfig
+  );
 })();
 /*! Bundled license information:
 
@@ -79011,5 +79165,9 @@ jspdf/dist/jspdf.es.min.js:
 */
 
 </script>
+    <script>
+        updateVariableReplacementVisibility();
+        sendVariableConfig();
+    </script>
   </body>
 </html>
