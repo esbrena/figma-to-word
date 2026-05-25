@@ -1,0 +1,39 @@
+{
+  "name": "ui-translation-exporter",
+  "version": "1.0.0",
+  "description": "Figma plugin to export UI screens with translation tables to PDF or Word.",
+  "private": true,
+  "main": "dist/code.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc -p tsconfig.figma.json --noEmit && tsc -p tsconfig.ui.json --noEmit",
+    "test": "npm run typecheck && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/esbrena/figma-to-word.git"
+  },
+  "keywords": [
+    "figma",
+    "plugin",
+    "pdf",
+    "docx"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/esbrena/figma-to-word/issues"
+  },
+  "homepage": "https://github.com/esbrena/figma-to-word#readme",
+  "dependencies": {
+    "docx": "^9.6.1",
+    "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.126.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3"
+  }
+}
